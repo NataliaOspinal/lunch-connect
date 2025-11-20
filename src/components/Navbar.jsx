@@ -12,7 +12,7 @@ const Navbar = () => {
       <div className="flex items-center justify-between">
         
         {/* LOGO  */}
-        <Link to="/" className="hover:opacity-80 transition-opacity">
+        <Link to="/" className="hover:opacity-80 cursor-pointer transition-opacity">
           <h2>LunchConnect</h2>
         </Link>
 
@@ -57,7 +57,7 @@ const Navbar = () => {
       {isOpen && (
         // Nota: Cambié 'bg-primary' por el hex #601919 para asegurar que se vea rojo vino
         // y 'border-secondary' por #3D0F0F para los separadores.
-        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-[#3D0F0F]">
+        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-secondary">
           
           {/* Opción 1: Explorar */}
           <Link 

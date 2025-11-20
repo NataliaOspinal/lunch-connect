@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom'; // 1. Importamos Link
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Función auxiliar para cerrar el menú al hacer clic en un enlace (solo móvil)
+  const closeMenu = () => setIsOpen(false);
+
   return (
-    // z-50 relative al nav para asegurar que el menú flote sobre todo
-    <nav className="relative z-50 p-4 mx-4 md:mx-12">
+    <nav className="relative z-50 p-4 mx-4 md:mx-12 text-white">
       <div className="flex items-center justify-between">
         
-        {/* LOGO */}
-        <h2>LunchConnect</h2>
+        {/* LOGO  */}
+        <Link to="/" className="hover:opacity-80 transition-opacity">
+          <h2>LunchConnect</h2>
+        </Link>
 
         {/* BOTÓN HAMBURGUESA */}
         <button 
@@ -29,8 +34,15 @@ const Navbar = () => {
 
         {/* MENÚ DE ESCRITORIO */}
         <div className="hidden md:flex items-center space-x-8">
-          <a href="/" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</a>
-          <a href="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</a>
+          {/* Usamos Link 'to' en lugar de a 'href' */}
+          <Link to="/" className="hover:scale-110 font-medium text-lg transition-transform duration-300">
+            Explorar
+          </Link>
+          
+          <Link to="/unete" className="hover:scale-110 font-medium text-lg transition-transform duration-300">
+            Unete
+          </Link>
+          
           <button className="p-2 rounded-full hover:cursor-pointer hover:scale-110 transition-transform duration-300">
             <img
               className="h-12 w-12 rounded-full"
@@ -41,28 +53,32 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* MENÚ MÓVIL DESPLEGABLE (Personalizado) */}
+      {/* MENÚ MÓVIL DESPLEGABLE */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden">
+        // Nota: Cambié 'bg-primary' por el hex #601919 para asegurar que se vea rojo vino
+        // y 'border-secondary' por #3D0F0F para los separadores.
+        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-[#3D0F0F]">
           
-          {/* Opción 1 */}
-          <a 
-            href="#" 
+          {/* Opción 1: Explorar */}
+          <Link 
+            to="/" 
+            onClick={closeMenu} // Cierra el menú al dar clic
             className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary transition-colors w-full block"
           >
             Explorar
-          </a>
+          </Link>
 
-          {/* Opción 2 */}
-          <a 
-            href="#" 
+          {/* Opción 2: Únete */}
+          <Link 
+            to="/unete" 
+            onClick={closeMenu} // Cierra el menú al dar clic
             className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary transition-colors w-full block"
           >
             Unete
-          </a>
+          </Link>
 
           {/* Opción 3 (Perfil) */}
-          <div className="flex justify-center py-4 border-b border-secondary hover:bg-secondary transition-colors w-full cursor-pointer">
+          <div className="flex justify-center py-4 hover:bg-secondary transition-colors w-full cursor-pointer">
              <a href="#">Perfil</a>
           </div>
 

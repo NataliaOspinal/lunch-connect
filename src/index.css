@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300..900&family=Wix+Madefor+Text:wght@400..800&display=swap');
+
+@import "tailwindcss";
+
+
+
+@theme{
+    --color-primary: #601919;
+    --color-secondary: #3D0F0F;
+    --color-terciary: #7B3C3C;
+    --font-primary: 'Figtree', sans-serif;
+    --font-secondary: 'Wix Madefor Text', sans-serif;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-primary);
+        color: #FFFFFF;
+    }
+    h1{
+        font-family: var(--font-secondary);
+        font-weight: 700;
+        font-size: 36px;
+    }
+    h2{
+        font-family: var(--font-secondary);
+        font-weight: 600;
+        font-size: 30px;
+    }
+    a{
+        font-family: var(--font-secondary);
+        font-size: 20px;
+        line-height: 1.6;
+    }
+    p{
+        font-family: var(--font-primary);
+        font-size: 25px;
+        line-height: 1.6;
+    }
+}

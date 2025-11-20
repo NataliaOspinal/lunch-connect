@@ -1,23 +1,19 @@
 import React from 'react';
-import Navbar from './components/Navbar'; 
-import BannerInicio from './components/BannerInicio';
-import BannerFeature from './components/BannerFeature';
-import BenefitsSection from './components/BenefitsSection';
-import BannerVariedad from './components/BannerVariedad';
-import Testimonials from './components/Testimonials';
-import Footer from './components/Footer';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home'; // Asegúrate de crear este archivo con el código del Paso 2
+import Unete from './pages/Unete'; // La nueva página
 
 function App() {
   return (
-    <div className="min-h-screen">
-      <Navbar />
-      <BannerInicio />
-      <BannerFeature />
-      <BenefitsSection />
-      <BannerVariedad />
-      <Testimonials />
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Ruta principal (Home) */}
+        <Route path="/" element={<Home />} />
+        
+        {/* Nueva ruta (/Unete) */}
+        <Route path="/unete" element={<Unete />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

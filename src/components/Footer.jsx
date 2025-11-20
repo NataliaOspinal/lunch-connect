@@ -24,7 +24,7 @@ const Footer = () => {
             Explorar
           </a>
           <a href="#" className="hover:text-gray-300 transition-colors">
-            Acerca de
+            Unete
           </a>
           <a href="#" className="hover:text-gray-300 transition-colors">
             Términos y condiciones

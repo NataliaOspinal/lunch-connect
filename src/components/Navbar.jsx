@@ -29,8 +29,8 @@ const Navbar = () => {
 
         {/* MENÚ DE ESCRITORIO */}
         <div className="hidden md:flex items-center space-x-8">
-          <a href="#" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</a>
-          <a href="#" className="hover:scale-110 font-medium transition-transform duration-300">Acerca de</a>
+          <a href="/" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</a>
+          <a href="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</a>
           <button className="p-2 rounded-full hover:cursor-pointer hover:scale-110 transition-transform duration-300">
             <img
               className="h-12 w-12 rounded-full"
@@ -58,7 +58,7 @@ const Navbar = () => {
             href="#" 
             className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary transition-colors w-full block"
           >
-            Acerca de
+            Unete
           </a>
 
           {/* Opción 3 (Perfil) */}

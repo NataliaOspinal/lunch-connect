@@ -35,7 +35,7 @@ const Navbar = () => {
         {/* MENÚ DE ESCRITORIO */}
         <div className="hidden md:flex items-center space-x-8">
           {/* Usamos Link 'to' en lugar de a 'href' */}
-          <Link to="/" className="hover:scale-110 font-medium text-lg transition-transform duration-300">
+          <Link to="/explorar" className="hover:scale-110 font-medium text-lg transition-transform duration-300">
             Explorar
           </Link>
           

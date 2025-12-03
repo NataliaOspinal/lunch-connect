@@ -1,0 +1,42 @@
+name: CI - Build & Lint
+
+# Eventos que disparan este workflow
+on:
+  push:
+    branches: [ "main", "develop" ] # Se ejecuta al hacer push a estas ramas
+  pull_request:
+    branches: [ "main", "develop" ] # Se ejecuta al abrir un Pull Request hacia estas ramas
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Usamos una máquina virtual Linux estándar
+
+    strategy:
+      matrix:
+        node-version: [20.x] # Puedes probar con varias versiones, pero la 20 es estable
+
+    steps:
+    # 1. Descargar tu código en la máquina virtual
+    - name: Checkout del repositorio
+      uses: actions/checkout@v4
+
+    # 2. Instalar Node.js y configurar caché para que sea más rápido
+    - name: Configurar Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    # 3. Instalar dependencias (npm ci es más seguro y rápido que npm install para CI)
+    - name: Instalar dependencias
+      run: npm ci
+
+    # 4. Verificar errores de sintaxis y estilo (Linting)
+    # Vite suele incluir este script en package.json. Si falla, el workflow se detiene.
+    - name: Correr Lint
+      run: npm run lint
+
+    # 5. Intentar crear el Build de producción
+    # Esto asegura que tu proyecto compila sin errores antes de subirlo.
+    - name: Verificar Build
+      run: npm run build

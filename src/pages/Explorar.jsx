@@ -16,3 +16,5 @@ const Explorar = () => {
     </div>
   );
 };
+
+export default Explorar;

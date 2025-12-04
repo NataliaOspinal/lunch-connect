@@ -70,7 +70,7 @@ const Navbar = () => {
         <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-secondary">
           <Link to="/explorar" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Explorar</Link>
           <Link to="/unete" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Únete</Link>
-          <Link to={loggedIn ? '/perfil' : '/login'} onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary w-full cursor-pointer">
+          <Link to={isUserLoggedIn ? '/perfil' : '/login'} onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary w-full cursor-pointer">
             Perfil
           </Link>
         </div>

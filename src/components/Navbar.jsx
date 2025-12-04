@@ -43,13 +43,15 @@ const Navbar = () => {
             Unete
           </Link>
           
-          <button className="p-2 rounded-full hover:cursor-pointer hover:scale-110 transition-transform duration-300">
-            <img
-              className="h-12 w-12 rounded-full"
-              src="/account_circle.png"
-              alt="User Avatar"
-            />
-          </button>
+          <Link to="/login" className="hover:scale-110 transition-transform duration-300">
+            <button className="p-2 rounded-full hover:cursor-pointer">
+              <img
+                className="h-12 w-12 rounded-full"
+                src="/account_circle.png"
+                alt="User Avatar"
+              />
+            </button>
+          </Link>
         </div>
       </div>
 
@@ -78,10 +80,9 @@ const Navbar = () => {
           </Link>
 
           {/* Opción 3 (Perfil) */}
-          <div className="flex justify-center py-4 hover:bg-secondary transition-colors w-full cursor-pointer">
-             <a href="#">Perfil</a>
-          </div>
-
+          <Link to="/login" onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary transition-colors w-full cursor-pointer">
+            Perfil
+          </Link>
         </div>
       )}
     </nav>

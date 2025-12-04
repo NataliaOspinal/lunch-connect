@@ -71,7 +71,7 @@ const TagSection = ({ title, tags, setTags }) => {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={handleAddTag} // Guardar si hace clic fuera (opcional)
-            className="bg-[#3D0F0F] border border-red-500/50 text-white text-sm rounded px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-red-400"
+            className="bg-secondary border border-red-500/50 text-white text-sm rounded px-2 py-1 w-32 focus:outline-none focus:ring-1 focus:ring-red-400"
             placeholder="Escribe..."
           />
         ) : (

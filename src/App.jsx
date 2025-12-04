@@ -14,7 +14,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        {/* Explorar contiene RestaurantSection */}
         <Route path="/explorar" element={<Explorar />} /> 
         <Route path="/unete" element={<Unete />} />
         <Route path="/login" element={<Login />} />

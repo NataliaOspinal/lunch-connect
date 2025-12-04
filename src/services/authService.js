@@ -40,14 +40,12 @@ export const registerUser = async (userData) => {
  * @param {string} contrasena - Contraseña.
  * @returns {string} El token JWT.
  */
-export const loginUser = async (nombreUsuario, contrasena) => {
+export const loginUser = async (correoOUsuario, contrasena) => {
     try {
         const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ nombreUsuario, contrasena }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ correoOUsuario, contrasena }), // ⚠️ campo correcto
         });
 
         if (!response.ok) {
@@ -58,17 +56,15 @@ export const loginUser = async (nombreUsuario, contrasena) => {
         const result = await response.json();
         const jwtToken = result.token;
 
-        if (!jwtToken) {
-            throw new Error("Login exitoso, pero el servidor no proporcionó un token.");
-        }
+        if (!jwtToken) throw new Error("Login exitoso, pero el servidor no proporcionó un token.");
 
         localStorage.setItem(TOKEN_KEY, jwtToken);
         return jwtToken;
-
     } catch (error) {
         throw error;
     }
 };
+
 
 /**
  * Elimina el token del almacenamiento local.

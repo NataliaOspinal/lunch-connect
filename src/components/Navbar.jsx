@@ -20,17 +20,12 @@ const Navbar = () => {
   return (
     <nav className="relative z-50 p-4 mx-4 md:mx-12 text-white">
       <div className="flex items-center justify-between">
-        
-        {/* LOGO  */}
         <Link to="/" className="hover:opacity-80 cursor-pointer transition-opacity">
           <h2>LunchConnect</h2>
         </Link>
 
-        {/* BOTÓN HAMBURGUESA */}
-        <button 
-          onClick={() => setIsOpen(!isOpen)} 
-          className="md:hidden p-2 text-white focus:outline-none"
-        >
+        {/* Botón hamburguesa */}
+        <button onClick={() => setIsOpen(!isOpen)} className="md:hidden p-2 text-white focus:outline-none">
           {isOpen ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -42,7 +37,7 @@ const Navbar = () => {
           )}
         </button>
 
-        {/* MENÚ DE ESCRITORIO */}
+        {/* Menú escritorio */}
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/explorar" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</Link>
           <Link to="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</Link>
@@ -70,30 +65,12 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* MENÚ MÓVIL DESPLEGABLE */}
+      {/* Menú móvil */}
       {isOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-secondary">
-          
-          {/* Opción 1: Explorar */}
-          <Link 
-            to="/explorar" 
-            onClick={closeMenu} // Cierra el menú al dar clic
-            className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary transition-colors w-full block"
-          >
-            Explorar
-          </Link>
-
-          {/* Opción 2: Únete */}
-          <Link 
-            to="/unete" 
-            onClick={closeMenu} // Cierra el menú al dar clic
-            className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary transition-colors w-full block"
-          >
-            Unete
-          </Link>
-
-          {/* Opción 3 (Perfil) */}
-          <Link to="/login" onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary transition-colors w-full cursor-pointer">
+          <Link to="/explorar" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Explorar</Link>
+          <Link to="/unete" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Únete</Link>
+          <Link to={loggedIn ? '/perfil' : '/login'} onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary w-full cursor-pointer">
             Perfil
           </Link>
         </div>

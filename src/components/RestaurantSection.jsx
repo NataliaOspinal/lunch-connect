@@ -38,11 +38,6 @@ const CreateGroup = ({ onClose, restaurante }) => {
     
     return coincideBusqueda && noEstaAgregado && cumpleFiltroAmigos;
   });
-  // Filtrar usuarios según la búsqueda (sin filtro por soloAmigos)
-  const usuariosFiltrados = listaAmigos.filter(usuario =>
-    usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
-    !invitados.find(inv => inv.id === usuario.id)
-  );
 
   const agregarInvitado = (usuario) => {
     if (!capacidad || invitados.length < parseInt(capacidad) - 1) {

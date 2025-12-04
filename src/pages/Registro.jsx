@@ -86,7 +86,7 @@ const Registro = () => {
 
           <div className="bg-primary rounded-[2.5rem] p-8 md:p-12 shadow-2xl text-center">
             <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 text-left gap-6 mb-6">
                 <InputField label="Nombres" id="nombres" value={formData.nombres} onChange={handleChange} />
                 <InputField label="Apellidos" id="apellidos" value={formData.apellidos} onChange={handleChange} />
                 <InputField label="Correo electrónico" type="email" id="correoElectronico" value={formData.correoElectronico} onChange={handleChange} className="md:col-span-2" />
@@ -99,7 +99,7 @@ const Registro = () => {
               {error && <p className="text-red-600 mb-4">{error}</p>}
               {success && <p className="text-green-600 mb-4">{success}</p>}
 
-              <button type="submit" disabled={loading} className="bg-primary hover:bg-[#4a1313] text-white font-semibold py-3 px-12 rounded-full transition-colors shadow-md text-lg">
+              <button type="submit" disabled={loading} className="bg-secondary hover:bg-[#4a1313] text-white font-semibold py-3 px-12 rounded-3xl mt-2 cursor-pointer transition-colors shadow-md text-lg">
                 {loading ? 'Registrando...' : 'Registrar'}
               </button>
             </form>

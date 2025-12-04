@@ -8,7 +8,7 @@ import Registro from './pages/Registro';
 import Perfil from './pages/Perfil';
 
 function App() {
-  const [isAuthenticated] = useState(true);
+  const [isAuthenticated] = useState(false);
   return (
     <BrowserRouter>
       <Routes>

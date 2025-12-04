@@ -75,7 +75,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-primary hover:bg-secondary cursor-pointer text-white font-bold py-3 px-12 rounded-full transition-colors shadow-md text-lg mt-4"
+                className="bg-secondary hover:bg-[#4a1313] cursor-pointer text-white font-bold py-3 px-12 rounded-full transition-colors shadow-md text-lg mt-4"
               >
                 {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
               </button>

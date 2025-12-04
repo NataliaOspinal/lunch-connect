@@ -1,19 +1,62 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import InputField from '../components/ui/InputField';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerUser, loginUser } from '../services/authService';
 
 const Registro = () => {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    nombres: '',
+    apellidos: '',
+    correoElectronico: '',
+    nombreUsuario: '',
+    linkedin: '',
+    contrasena: '',
+    rubroProfesional: '',
+  });
+
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      // Enviamos los datos al backend
+      await registerUser({
+        ...formData,
+        tituloPrincipal: "----", // Valor por defecto
+      });
+
+      // Login automático
+      await loginUser(formData.nombreUsuario, formData.contrasena);
+
+      // Redirigir a dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Error al registrarse.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-primary flex flex-col font-sans">
       <Navbar />
 
       <main className="grow flex items-center justify-center px-4 py-12 bg-white font-secondary">
-        {/* Aumentamos el max-w para que quepan bien las dos columnas */}
         <div className="w-full max-w-2xl">
-          
-          {/* Título y Subtítulo */}
           <div className="text-center text-primary mb-10">
             <h1 className="text-4xl md:text-5xl font-semibold mb-4">
               Crea tu cuenta
@@ -23,43 +66,34 @@ const Registro = () => {
             </p>
           </div>
 
-          {/* Caja del Formulario */}
           <div className="bg-primary rounded-[2.5rem] p-8 md:p-12 shadow-2xl text-center">
-            
-            <form>
-              {/* Grid de 2 columnas en desktop, 1 en móvil */}
+            <form onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left mb-8">
-                
-                <InputField label="Nombres" id="nombres" />
-                <InputField label="Apellidos" id="apellidos" />
-                
-                {/* md:col-span-2 hace que ocupe todo el ancho */}
-                <InputField label="Correo electrónico" type="email" id="email" className="md:col-span-2" />
-                
-                <InputField label="Nombre de usuario" id="username" />
-                <InputField label="LinkedIn (opcional)" id="linkedin" />
-                
-                <InputField label="Contraseña" type="password" id="pass1" />
-                <InputField label="Repetir contraseña" type="password" id="pass2" />
-                
-                <InputField label="Rubro profesional" id="rubro" className="md:col-span-2" />
-
+                <InputField label="Nombres" id="nombres" value={formData.nombres} onChange={handleChange} />
+                <InputField label="Apellidos" id="apellidos" value={formData.apellidos} onChange={handleChange} />
+                <InputField label="Correo electrónico" type="email" id="correoElectronico" value={formData.correoElectronico} onChange={handleChange} className="md:col-span-2" />
+                <InputField label="Nombre de usuario" id="nombreUsuario" value={formData.nombreUsuario} onChange={handleChange} />
+                <InputField label="LinkedIn (opcional)" id="linkedin" value={formData.linkedin} onChange={handleChange} />
+                <InputField label="Contraseña" type="password" id="contrasena" value={formData.contrasena} onChange={handleChange} />
+                <InputField label="Rubro profesional" id="rubroProfesional" value={formData.rubroProfesional} onChange={handleChange} className="md:col-span-2" />
               </div>
+
+              {error && <p className="text-red-600 mb-4">{error}</p>}
+
+              <button type="submit" disabled={loading} className="bg-primary cursor-pointer hover:bg-[#4a1313] text-white font-semibold py-3 px-12 rounded-full transition-colors shadow-md text-lg">
+                {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+              </button>
             </form>
           </div>
-            <div className="text-center mt-6">
-                {/* Enlace a Registro */}
+
+          <div className="text-center mt-6">
             <p className="text-primary mb-6 text-[20px] font-primary">
               ¿Ya tienes cuenta?{' '}
               <Link to="/login" className="font-bold underline hover:text-secondary">
-                Inicia Sesion
+                Inicia Sesión
               </Link>
             </p>
-                {/* Botón Submit */}
-              <button className="bg-primary cursor-pointer hover:bg-[#4a1313] text-white font-semibold py-3 px-12 rounded-full transition-colors shadow-md text-lg">
-                Crear cuenta
-              </button>
-            </div>
+          </div>
         </div>
       </main>
 

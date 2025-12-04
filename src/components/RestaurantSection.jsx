@@ -1,24 +1,18 @@
+import { useState, useEffect } from 'react';
 
-
-import { useState } from 'react'; 
-
-// Componente CreateGroup mejorado
+// --- COMPONENTE CreateGroup (Mantenemos tu lógica original) ---
 const CreateGroup = ({ onClose, restaurante }) => {
   const [invitados, setInvitados] = useState([]);
   const [capacidad, setCapacidad] = useState('');
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [soloAmigos, setSoloAmigos] = useState(false); // Checkbox para solo amigos
+  const [soloAmigos, setSoloAmigos] = useState(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   
-  // Simular si el usuario es VIP (esto vendría de tu sistema de autenticación)
-  const usuarioEsVIP = true; // Cambiar según tu lógica de usuario
-  
-  // Mostrar opción VIP si el usuario es VIP y capacidad > 5
+  const usuarioEsVIP = true;
   const mostrarOpcionVIP = usuarioEsVIP && parseInt(capacidad) > 5;
 
-  // Lista simulada de amigos y usuarios
   const listaAmigos = [
     { id: 1, nombre: 'Carlos Mendoza', esAmigo: true, avatar: 'C' },
     { id: 2, nombre: 'María García', esAmigo: true, avatar: 'M' },
@@ -30,12 +24,10 @@ const CreateGroup = ({ onClose, restaurante }) => {
     { id: 8, nombre: 'Daniel Vargas', esAmigo: false, avatar: 'D' },
   ];
 
-  // Filtrar usuarios según la búsqueda y el checkbox "Solo Amigos"
   const usuariosFiltrados = listaAmigos.filter(usuario => {
     const coincideBusqueda = usuario.nombre.toLowerCase().includes(busqueda.toLowerCase());
     const noEstaAgregado = !invitados.find(inv => inv.id === usuario.id);
     const cumpleFiltroAmigos = soloAmigos ? usuario.esAmigo : true;
-    
     return coincideBusqueda && noEstaAgregado && cumpleFiltroAmigos;
   });
 
@@ -65,12 +57,18 @@ const CreateGroup = ({ onClose, restaurante }) => {
   };
 
   const finalizarReserva = () => {
-    console.log({ restaurante, invitados, capacidad, dia, hora });
+    // AQUÍ PODRÍAS HACER EL POST A TU API PARA CREAR EL GRUPO REALMENTE
+    console.log({ 
+        restaurante_id: restaurante.id, 
+        invitados, 
+        capacidad, 
+        fecha: dia, 
+        hora 
+    });
     alert('¡Reserva confirmada exitosamente!');
     onClose();
   };
 
-  // Vista de confirmación
   if (mostrarConfirmacion) {
     return (
       <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -112,9 +110,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-500 mb-2">👥 Invitados ({totalPersonas} personas)</p>
-                  {soloAmigos && (
-                    <p className="text-xs text-gray-600 mb-2">🔒 Grupo privado - Solo amigos</p>
-                  )}
+                  {soloAmigos && <p className="text-xs text-gray-600 mb-2">🔒 Grupo privado - Solo amigos</p>}
                   {mostrarOpcionVIP && (
                     <div className="mb-2 px-3 py-2 rounded-lg text-sm font-medium" style={{ background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(218, 165, 32, 0.2) 100%)', color: '#B8860B' }}>
                       ⭐ Grupo VIP - Capacidad extendida
@@ -162,11 +158,10 @@ const CreateGroup = ({ onClose, restaurante }) => {
     );
   }
 
-  // Vista principal de creación
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-linear-to-br from-red-50 to-rose-50 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
           <button 
             onClick={onClose}
             className="absolute top-4 right-4 z-10 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
@@ -174,10 +169,9 @@ const CreateGroup = ({ onClose, restaurante }) => {
             <span className="text-xl leading-none">✕</span>
           </button>
 
-          {/* Header con imagen del restaurante */}
           <div className="relative h-56 overflow-hidden">
             <img 
-              src={restaurante.imagen}
+              src={restaurante.imagen || 'https://via.placeholder.com/400'}
               alt={restaurante.nombre}
               className="w-full h-full object-cover"
             />
@@ -191,9 +185,8 @@ const CreateGroup = ({ onClose, restaurante }) => {
           </div>
 
           <div className="p-6">
-            {/* Administrador */}
             <div className="mb-6">
-              <div className="flex items-center space-x-3 bg-white p-4 rounded-xl shadow-sm">
+              <div className="flex items-center space-x-3 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-md" style={{ background: 'linear-gradient(135deg, #601919 0%, #7b3c3c 100%)' }}>
                   A
                 </div>
@@ -204,18 +197,15 @@ const CreateGroup = ({ onClose, restaurante }) => {
               </div>
             </div>
 
-            {/* Selector de tipo de grupo */}
             <div className="mb-4">
-              <div className="bg-white p-4 rounded-xl shadow-sm">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={soloAmigos}
                     onChange={(e) => setSoloAmigos(e.target.checked)}
                     className="w-5 h-5 rounded cursor-pointer"
-                    style={{ 
-                      accentColor: '#601919',
-                    }}
+                    style={{ accentColor: '#601919' }}
                   />
                   <div>
                     <p className="font-medium text-gray-800">🔒 Solo Amigos</p>
@@ -225,7 +215,6 @@ const CreateGroup = ({ onClose, restaurante }) => {
               </div>
             </div>
 
-            {/* Badge VIP (solo si es usuario VIP y capacidad > 5) */}
             {mostrarOpcionVIP && (
               <div className="mb-4 p-4 rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(218, 165, 32, 0.15) 100%)' }}>
                 <div className="flex items-center space-x-2">
@@ -238,153 +227,24 @@ const CreateGroup = ({ onClose, restaurante }) => {
               </div>
             )}
 
-            {/* Barra de búsqueda */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xl">👥</span>
-                  <p className="font-semibold text-gray-800">Invitados</p>
+            {/* Configuración del grupo */}
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="text-sm font-semibold text-gray-700 mb-1 block">Capacidad Máxima *</label>
+                    <input type="number" value={capacidad} onChange={(e) => setCapacidad(e.target.value)} min="1" className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Ej: 4" />
                 </div>
-                {capacidad && (
-                  <span className="text-sm text-gray-600">
-                    {totalPersonas}/{capacidad} personas
-                  </span>
-                )}
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm p-4">
-                {/* Barra de búsqueda */}
-                <div className="relative mb-4">
-                  <input
-                    type="text"
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder="Buscar personas..."
-                    className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-lg focus:outline-none text-gray-900"
-                    style={{ borderColor: '#7b3c3c' }}
-                    onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(96, 25, 25, 0.3)'}
-                    onBlur={(e) => e.target.style.boxShadow = ''}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    🔍
-                  </span>
-                </div>
-
-                {/* Resultados de búsqueda */}
-                {busqueda && (
-                  <div className="mb-4 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
-                    {usuariosFiltrados.length > 0 ? (
-                      usuariosFiltrados.map(usuario => (
-                        <button
-                          key={usuario.id}
-                          onClick={() => agregarInvitado(usuario)}
-                          className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-                          disabled={capacidad && totalPersonas >= parseInt(capacidad)}
-                        >
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium" style={{ background: 'linear-gradient(135deg, #7b3c3c 0%, #601919 100%)' }}>
-                            {usuario.avatar}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <p className="font-medium text-gray-900">{usuario.nombre}</p>
-                            <p className="text-xs text-gray-500">{usuario.esAmigo ? '👥 Amigo' : '👤 Usuario'}</p>
-                          </div>
-                          <span className="text-2xl">➕</span>
-                        </button>
-                      ))
-                    ) : (
-                      <p className="text-center py-4 text-gray-500 text-sm">No se encontraron resultados</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Lista de invitados agregados */}
-                {invitados.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-600 mb-2">Invitados agregados:</p>
-                    <div className="space-y-2">
-                      {invitados.map(invitado => (
-                        <div
-                          key={invitado.id}
-                          className="flex items-center space-x-3 p-2 rounded-lg"
-                          style={{ background: 'linear-gradient(135deg, rgba(96, 25, 25, 0.1) 0%, rgba(123, 60, 60, 0.15) 100%)' }}
-                        >
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm shadow-sm" style={{ background: 'linear-gradient(135deg, #7b3c3c 0%, #601919 100%)' }}>
-                            {invitado.avatar}
-                          </div>
-                          <span className="flex-1 text-sm font-medium text-gray-700">{invitado.nombre}</span>
-                          <button
-                            onClick={() => eliminarInvitado(invitado.id)}
-                            className="text-gray-500 hover:text-red-500 text-lg leading-none transition-colors"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-sm font-semibold text-gray-700 mb-1 block">Día *</label>
+                        <input type="date" value={dia} onChange={(e) => setDia(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
                     </div>
-                  </div>
-                )}
-
-                {invitados.length === 0 && !busqueda && (
-                  <p className="text-center py-4 text-gray-400 text-sm">
-                    Busca y agrega invitados para tu grupo
-                  </p>
-                )}
-              </div>
+                    <div>
+                        <label className="text-sm font-semibold text-gray-700 mb-1 block">Hora *</label>
+                        <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                </div>
             </div>
 
-            {/* Capacidad Máxima */}
-            <div className="mb-4">
-              <label className="flex items-center space-x-2 mb-2 text-sm font-semibold text-gray-700">
-                <span className="text-lg">👥</span>
-                <span>Capacidad Máxima *</span>
-              </label>
-              <input
-                type="number"
-                value={capacidad}
-                onChange={(e) => setCapacidad(e.target.value)}
-                min="1"
-                placeholder="Ej: 6 personas"
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:border-transparent text-gray-900"
-                onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(96, 25, 25, 0.3)'}
-                onBlur={(e) => e.target.style.boxShadow = ''}
-              />
-            </div>
-
-            {/* Día y Hora */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="flex items-center space-x-2 mb-2 text-sm font-semibold text-gray-700">
-                  <span className="text-lg">📅</span>
-                  <span>Día *</span>
-                </label>
-                <input
-                  type="date"
-                  value={dia}
-                  onChange={(e) => setDia(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:border-transparent text-gray-900"
-                  style={{ color: '#1f2937' }}
-                  onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(96, 25, 25, 0.3)'}
-                  onBlur={(e) => e.target.style.boxShadow = ''}
-                />
-              </div>
-              <div>
-                <label className="flex items-center space-x-2 mb-2 text-sm font-semibold text-gray-700">
-                  <span className="text-lg">🕐</span>
-                  <span>Hora *</span>
-                </label>
-                <input
-                  type="time"
-                  value={hora}
-                  onChange={(e) => setHora(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:border-transparent text-gray-900"
-                  style={{ color: '#1f2937' }}
-                  onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(96, 25, 25, 0.3)'}
-                  onBlur={(e) => e.target.style.boxShadow = ''}
-                />
-              </div>
-            </div>
-
-            {/* Botón Continuar */}
             <button 
               onClick={confirmarReserva}
               className="w-full py-4 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
@@ -399,43 +259,63 @@ const CreateGroup = ({ onClose, restaurante }) => {
   );
 };
 
-// Componente principal RestaurantSection
+// --- COMPONENTE PRINCIPAL CONECTADO A LA API ---
 const RestaurantSection = () => {
+  // Estados para filtros y datos
   const [categoria, setCategoria] = useState('');
   const [ubicacion, setUbicacion] = useState('');
+  
+  // Estado para la data de la API
+  const [restaurantes, setRestaurantes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const [modalAbierto, setModalAbierto] = useState(false);
   const [restauranteSeleccionado, setRestauranteSeleccionado] = useState(null);
 
-  const restaurantes = [
-    {
-      id: 1,
-      nombre: 'Chifa A',
-      rating: 4.6,
-      direccion: 'Av. La Marina 456, San Miguel',
-      imagen: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop'
-    },
-    {
-      id: 2,
-      nombre: 'Chifa B',
-      rating: 4.6,
-      direccion: 'Jr. Carabaya 789, Cercado de Lima',
-      imagen: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop'
-    },
-    {
-      id: 3,
-      nombre: 'Chifa C',
-      rating: 4.6,
-      direccion: 'Av. Arequipa 321, Miraflores',
-      imagen: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop'
-    },
-    {
-      id: 4,
-      nombre: 'Chifa sdfrdg',
-      rating: 4.5,
-      direccion: 'Calle Los Olivos 654, San Isidro',
-      imagen: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop'
-    }
-  ];
+  // 1. FETCH A LA API DE RENDER
+  useEffect(() => {
+    const fetchRestaurantes = async () => {
+      try {
+        const response = await fetch('https://lunchconnect-backend.onrender.com/api/restaurantes');
+        const data = await response.json();
+        
+        // Mapeamos los datos de la BD a la estructura que usa tu componente
+        const dataFormateada = data.map(r => ({
+            id: r.id_restaurante,
+            nombre: r.nombre,
+            rating: r.calificacion_promedio || 4.5, // Valor por defecto si es null
+            direccion: r.direccion,
+            distrito: r.distrito,
+            categoria: r.categoria,
+            imagen: r.url_imagen || 'https://via.placeholder.com/400x300?text=Restaurante' // Imagen por defecto
+        }));
+
+        setRestaurantes(dataFormateada);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error cargando restaurantes:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchRestaurantes();
+  }, []);
+
+  // 2. LÓGICA DE FILTRADO (Cliente-Side)
+  // Filtramos los datos que ya descargamos basándonos en los selects
+  const restaurantesFiltrados = restaurantes.filter((r) => {
+    // Si hay categoría seleccionada, verificamos si coincide (ignorando mayúsculas/minúsculas)
+    const matchCategoria = categoria 
+        ? r.categoria?.toLowerCase() === categoria.toLowerCase() 
+        : true;
+    
+    // Si hay ubicación seleccionada, verificamos el distrito
+    const matchUbicacion = ubicacion 
+        ? r.distrito?.toLowerCase() === ubicacion.toLowerCase() 
+        : true;
+
+    return matchCategoria && matchUbicacion;
+  });
 
   const abrirModal = (restaurante) => {
     setRestauranteSeleccionado(restaurante);
@@ -455,6 +335,7 @@ const RestaurantSection = () => {
           Explora restaurantes
         </h1>
 
+        {/* --- FILTROS --- */}
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           
           <div className="flex items-center gap-3">
@@ -467,18 +348,14 @@ const RestaurantSection = () => {
                 onChange={(e) => setCategoria(e.target.value)}
                 className="w-full appearance-none bg-primary text-white px-4 py-2 pr-10 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-700"
               >
-                <option value="">-------</option>
+                <option value="">Todas</option>
                 <option value="chifa">Chifa</option>
                 <option value="italiana">Italiana</option>
-                <option value="peruana">Peruana</option>
+                <option value="criolla">Criolla</option>
                 <option value="japonesa">Japonesa</option>
+                <option value="comida rapida">Comida Rápida</option>
               </select>
-              <svg 
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -494,67 +371,76 @@ const RestaurantSection = () => {
                 onChange={(e) => setUbicacion(e.target.value)}
                 className="w-full appearance-none bg-primary text-white px-4 py-2 pr-10 rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-700"
               >
-                <option value="">-------</option>
+                <option value="">Todas</option>
                 <option value="miraflores">Miraflores</option>
-                <option value="san-isidro">San Isidro</option>
-                <option value="barranco">Barranco</option>
+                <option value="san isidro">San Isidro</option>
+                <option value="lince">Lince</option>
+                <option value="jesus maria">Jesús María</option>
                 <option value="surco">Surco</option>
               </select>
-              <svg 
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {restaurantes.map((restaurante) => (
-            <div key={restaurante.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-              
-              <div className="aspect-video overflow-hidden">
-                <img
-                  src={restaurante.imagen}
-                  alt={restaurante.nombre}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                />
-              </div>
+        {/* --- GRID DE RESULTADOS --- */}
+        {loading ? (
+            <p className="text-center text-gray-500">Cargando restaurantes...</p>
+        ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {restaurantesFiltrados.length > 0 ? (
+                restaurantesFiltrados.map((restaurante) => (
+                    <div key={restaurante.id} className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col">
+                    
+                    <div className="aspect-video overflow-hidden bg-gray-200">
+                        <img
+                        src={restaurante.imagen}
+                        alt={restaurante.nombre}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {e.target.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen'}} // Fallback si falla la imagen
+                        />
+                    </div>
 
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {restaurante.nombre}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-700 font-medium">{restaurante.rating}</span>
-                    <svg 
-                      className="w-4 h-4 text-yellow-400" 
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  </div>
+                    <div className="p-4 flex flex-col flex-1 justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2 justify-between">
+                                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                    {restaurante.nombre}
+                                </h3>
+                                <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-xs">
+                                    <span className="text-gray-700 font-bold">{restaurante.rating}</span>
+                                    <svg className="w-3 h-3 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <p className="text-gray-600 text-sm mb-1 truncate">
+                                📍 {restaurante.direccion}
+                            </p>
+                            <p className="text-gray-400 text-xs mb-4 uppercase font-semibold">
+                                {restaurante.categoria} • {restaurante.distrito}
+                            </p>
+                        </div>
+
+                        <button 
+                        onClick={() => abrirModal(restaurante)}
+                        className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-[#7b3c3c] transition-colors font-medium mt-auto"
+                        >
+                        Arma tu grupo
+                        </button>
+                    </div>
+                    </div>
+                ))
+            ) : (
+                <div className="col-span-full text-center py-10">
+                    <p className="text-xl text-gray-500">No se encontraron restaurantes con esos filtros.</p>
                 </div>
-
-                <p className="text-gray-600 text-sm mb-4">
-                  📍 {restaurante.direccion}
-                </p>
-
-                <button 
-                  onClick={() => abrirModal(restaurante)}
-                  className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-terciary transition-colors font-medium"
-                >
-                  Arma tu grupo
-                </button>
-              </div>
+            )}
             </div>
-          ))}
-        </div>
+        )}
       </div>
 
       {/* Modal */}
@@ -569,4 +455,3 @@ const RestaurantSection = () => {
 }
 
 export default RestaurantSection;
-

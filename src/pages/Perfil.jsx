@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import InputField from '../components/ui/InputField';
+import { Link, useNavigate } from 'react-router-dom'; // <--- IMPORTANTE
 import { logoutUser } from '../services/authService';
 
 const Perfil = () => {

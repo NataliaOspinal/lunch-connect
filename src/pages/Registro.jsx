@@ -7,6 +7,7 @@ import { registerUser, loginUser } from '../services/authService';
 
 const Registro = () => {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     nombres: '',
     apellidos: '',
@@ -30,14 +31,38 @@ const Registro = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validaciones básicas
+    if (!formData.nombres || !formData.apellidos || !formData.correoElectronico || !formData.contrasena || !formData.rubroProfesional) {
+      setError("Por favor completa todos los campos obligatorios.");
+      return;
+    }
+
+    if (formData.contrasena.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(formData.correoElectronico)) {
+      setError("Ingresa un correo electrónico válido.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Enviamos los datos al backend
-      await registerUser({
+      // Payload final para enviar al backend
+      const payload = {
         ...formData,
-        tituloPrincipal: "----", // Valor por defecto
-      });
+        tituloPrincipal: "----",
+        linkedin: formData.linkedin || null,
+      };
+
+      console.log("Enviando payload al backend:", payload);
+
+      // Registro
+      await registerUser(payload);
 
       // Login automático
       await loginUser(formData.nombreUsuario, formData.contrasena);
@@ -45,6 +70,7 @@ const Registro = () => {
       // Redirigir a dashboard
       navigate('/dashboard');
     } catch (err) {
+      console.error("Error al registrarse:", err);
       setError(err.message || 'Error al registrarse.');
     } finally {
       setLoading(false);

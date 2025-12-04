@@ -8,7 +8,7 @@ const Navbar = () => {
   const closeMenu = () => setIsOpen(false);
 
   // VARIABLE TEMPORAL PARA PROBAR (Ponla en true para ver el perfil)
-  const isUserLoggedIn = true;
+  const isUserLoggedIn = false;
 
   return (
     <nav className="relative z-50 p-4 mx-4 md:mx-12 text-white">
@@ -51,12 +51,9 @@ const Navbar = () => {
           ) : (
             // CASO 2: NO HAY SESIÓN -> Va a /login
             <Link to="/login" className="hover:scale-110 transition-transform duration-300">
-              <button className="p-2 rounded-full hover:cursor-pointer">
-                 {/* Icono genérico o texto "Login" */}
-                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-              </button>
+                <button className="p-2 rounded-full hover:cursor-pointer border-2 border-transparent hover:border-white/50">
+                  <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
+                </button>
             </Link>
           )}
         </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const BannerInicio = () => {
   return (
@@ -18,11 +19,11 @@ const BannerInicio = () => {
         </p>
         
         {/* BOTÓN */}
-        {/* El 'w-fit' es importante para que el botón no ocupe todo el ancho si usas flex-col */}
-        <button className="bg-red-700 font-semibold px-8 py-3 rounded-full hover:cursor-pointer hover:bg-secondary transition-colors duration-300 shadow-lg w-fit">
+        <Link to="/registro">
+        <button className="bg-red-700 font-semibold font-primary text-[18px] px-8 py-3 rounded-full hover:cursor-pointer hover:bg-secondary transition-colors duration-300 shadow-lg w-fit">
           Comenzar Ahora
         </button>
-
+        </Link>
       </div>
 
       {/* SECCIÓN DE IMAGEN */}

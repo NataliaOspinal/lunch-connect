@@ -1,7 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useState} from "react";
+import EventModal from "./EventModal";
 
 const FeaturedEvents = () => {
   const scrollRef = useRef(null);
+
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const mockEvents = [
     {
@@ -54,8 +57,23 @@ const FeaturedEvents = () => {
     }
   };
 
+  // Función para abrir el modal
+  const handleOpenModal = (event) => {
+    setSelectedEvent(event);
+  };
+
+  // Función para cerrar
+  const handleCloseModal = () => {
+    setSelectedEvent(null);
+  };
+
   return (
-    <section className="py-12 w-full bg-white">
+    <section className="py-12 w-full bg-white relative">
+      <EventModal 
+        isOpen={!!selectedEvent} 
+        onClose={handleCloseModal} 
+        event={selectedEvent} 
+      />
       <div className="max-w-7xl mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-primary mb-10 font-primary">
           Eventos destacados
@@ -109,7 +127,7 @@ const FeaturedEvents = () => {
                       )}
                     </div>
                     
-                    <button className="w-full py-2 bg-secondary rounded-full font-semibold hover:bg-black transition-colors text-sm">
+                    <button onClick={() => handleOpenModal(event)} className="w-full py-2 cursor-pointer bg-secondary rounded-full font-semibold hover:bg-black transition-colors text-sm">
                       Únete
                     </button>
                   </div>

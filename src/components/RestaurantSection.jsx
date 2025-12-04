@@ -152,7 +152,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-gradient-to-br from-red-50 to-rose-50 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+        <div className="bg-linear-to-br from-red-50 to-rose-50 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
           <button 
             onClick={onClose}
             className="absolute top-4 right-4 z-10 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"

@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { isAuthenticated } from '../services/authService';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom'; // <--- IMPORTANTE: Importar useNavigate
+import { isAuthenticated, logoutUser } from '../services/authService';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const navigate = useNavigate(); // <--- IMPORTANTE: Inicializar
+  
+  // Verificamos si hay token real
+  const isUserLoggedIn = isAuthenticated(); 
 
-  useEffect(() => {
-    setLoggedIn(isAuthenticated()); // Actualiza si hay sesión
-  }, []);
+  const handleLogout = () => {
+    logoutUser(); // Borra el token
+    navigate('/login'); // Redirige al login
+    window.location.reload(); // Opcional: Recarga para limpiar estados
+  };
 
   const closeMenu = () => setIsOpen(false);
 
@@ -35,14 +40,28 @@ const Navbar = () => {
         {/* Menú escritorio */}
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/explorar" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</Link>
-          <Link to="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Únete</Link>
-
-          {/* Icono perfil según sesión */}
-          <Link to={loggedIn ? '/perfil' : '/login'} className="hover:scale-110 transition-transform duration-300">
-            <button className="p-2 rounded-full hover:cursor-pointer border-2 border-transparent hover:border-white/50">
-              <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
-            </button>
-          </Link>
+          <Link to="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</Link>
+          
+          {/* LÓGICA DE ICONO DE PERFIL */}
+          {isUserLoggedIn ? (
+            // SI ESTÁ LOGUEADO: Muestra Avatar (Link a Perfil) y Botón de Salir
+            <div className="flex items-center gap-4">
+              <Link to="/perfil" className="hover:scale-110 transition-transform duration-300">
+                <button className="p-2 rounded-full hover:cursor-pointer border-2 border-transparent hover:border-white/50">
+                  <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
+                </button>
+              </Link>
+              {/* Botón Logout opcional en escritorio */}
+              <button onClick={handleLogout} className="text-sm font-bold hover:underline">Salir</button>
+            </div>
+          ) : (
+            // SI NO ESTÁ LOGUEADO: Muestra Icono Login
+            <Link to="/login" className="hover:scale-110 transition-transform duration-300">
+                <button className="p-2 rounded-full hover:cursor-pointer border-2 border-transparent hover:border-white/50">
+                  <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
+                </button>
+            </Link>
+          )}
         </div>
       </div>
 

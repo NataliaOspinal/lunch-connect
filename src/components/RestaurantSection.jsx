@@ -7,28 +7,29 @@ const CreateGroup = ({ onClose, restaurante }) => {
   const [dia, setDia] = useState('');
   const [hora, setHora] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [tipoGrupo, setTipoGrupo] = useState('amigos'); // 'amigos' o 'vip'
+  const [soloAmigos, setSoloAmigos] = useState(false); // Checkbox para solo amigos
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
+  
+  // Simular si el usuario es VIP (esto vendría de tu sistema de autenticación)
+  const usuarioEsVIP = true; // Cambiar según tu lógica de usuario
+  
+  // Mostrar opción VIP si el usuario es VIP y capacidad > 5
+  const mostrarOpcionVIP = usuarioEsVIP && parseInt(capacidad) > 5;
 
-  // Lista simulada de amigos y usuarios VIP
+  // Lista simulada de amigos y usuarios
   const listaAmigos = [
-    { id: 1, nombre: 'Carlos Mendoza', tipo: 'amigo', avatar: 'C' },
-    { id: 2, nombre: 'María García', tipo: 'amigo', avatar: 'M' },
-    { id: 3, nombre: 'José Rodríguez', tipo: 'amigo', avatar: 'J' },
-    { id: 4, nombre: 'Ana Torres', tipo: 'amigo', avatar: 'A' },
-    { id: 5, nombre: 'Luis Fernández', tipo: 'amigo', avatar: 'L' },
+    { id: 1, nombre: 'Carlos Mendoza', esAmigo: true, avatar: 'C' },
+    { id: 2, nombre: 'María García', esAmigo: true, avatar: 'M' },
+    { id: 3, nombre: 'José Rodríguez', esAmigo: true, avatar: 'J' },
+    { id: 4, nombre: 'Ana Torres', esAmigo: true, avatar: 'A' },
+    { id: 5, nombre: 'Luis Fernández', esAmigo: true, avatar: 'L' },
+    { id: 6, nombre: 'Roberto Sánchez', esAmigo: false, avatar: 'R' },
+    { id: 7, nombre: 'Patricia Gómez', esAmigo: false, avatar: 'P' },
+    { id: 8, nombre: 'Daniel Vargas', esAmigo: false, avatar: 'D' },
   ];
 
-  const listaVIP = [
-    { id: 6, nombre: 'Roberto Sánchez', tipo: 'vip', avatar: 'R' },
-    { id: 7, nombre: 'Patricia Gómez', tipo: 'vip', avatar: 'P' },
-    { id: 8, nombre: 'Daniel Vargas', tipo: 'vip', avatar: 'D' },
-  ];
-
-  const listaCompleta = tipoGrupo === 'amigos' ? listaAmigos : listaVIP;
-
-  // Filtrar usuarios según la búsqueda
-  const usuariosFiltrados = listaCompleta.filter(usuario =>
+  // Filtrar usuarios según la búsqueda (sin filtro por soloAmigos)
+  const usuariosFiltrados = listaAmigos.filter(usuario =>
     usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
     !invitados.find(inv => inv.id === usuario.id)
   );
@@ -106,6 +107,14 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-500 mb-2">👥 Invitados ({totalPersonas} personas)</p>
+                  {soloAmigos && (
+                    <p className="text-xs text-gray-600 mb-2">🔒 Grupo privado - Solo amigos</p>
+                  )}
+                  {mostrarOpcionVIP && (
+                    <div className="mb-2 px-3 py-2 rounded-lg text-sm font-medium" style={{ background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(218, 165, 32, 0.2) 100%)', color: '#B8860B' }}>
+                      ⭐ Grupo VIP - Capacidad extendida
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium" style={{ background: 'linear-gradient(135deg, #601919 0%, #7b3c3c 100%)' }}>
@@ -192,31 +201,37 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
             {/* Selector de tipo de grupo */}
             <div className="mb-4">
-              <div className="flex gap-2 bg-white p-1 rounded-lg shadow-sm">
-                <button
-                  onClick={() => setTipoGrupo('amigos')}
-                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                    tipoGrupo === 'amigos' 
-                      ? 'text-white shadow-md' 
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                  style={tipoGrupo === 'amigos' ? { background: 'linear-gradient(135deg, #601919 0%, #7b3c3c 100%)' } : {}}
-                >
-                  👥 Solo Amigos
-                </button>
-                <button
-                  onClick={() => setTipoGrupo('vip')}
-                  className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                    tipoGrupo === 'vip' 
-                      ? 'text-white shadow-md' 
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                  style={tipoGrupo === 'vip' ? { background: 'linear-gradient(135deg, #601919 0%, #7b3c3c 100%)' } : {}}
-                >
-                  ⭐ VIP
-                </button>
+              <div className="bg-white p-4 rounded-xl shadow-sm">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={soloAmigos}
+                    onChange={(e) => setSoloAmigos(e.target.checked)}
+                    className="w-5 h-5 rounded cursor-pointer"
+                    style={{ 
+                      accentColor: '#601919',
+                    }}
+                  />
+                  <div>
+                    <p className="font-medium text-gray-800">🔒 Solo Amigos</p>
+                    <p className="text-xs text-gray-500">Solo tus amigos podrán unirse a este grupo</p>
+                  </div>
+                </label>
               </div>
             </div>
+
+            {/* Badge VIP (solo si es usuario VIP y capacidad > 5) */}
+            {mostrarOpcionVIP && (
+              <div className="mb-4 p-4 rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(218, 165, 32, 0.15) 100%)' }}>
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl">⭐</span>
+                  <div>
+                    <p className="font-semibold" style={{ color: '#B8860B' }}>Grupo VIP Activado</p>
+                    <p className="text-xs text-gray-600">Tienes acceso a capacidad extendida y beneficios exclusivos</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Barra de búsqueda */}
             <div className="mb-6">
@@ -239,7 +254,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
                     type="text"
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
-                    placeholder={`Buscar ${tipoGrupo === 'amigos' ? 'amigos' : 'usuarios VIP'}...`}
+                    placeholder="Buscar personas..."
                     className="w-full px-4 py-3 pr-10 border border-gray-200 rounded-lg focus:outline-none text-gray-900"
                     style={{ borderColor: '#7b3c3c' }}
                     onFocus={(e) => e.target.style.boxShadow = '0 0 0 2px rgba(96, 25, 25, 0.3)'}
@@ -266,7 +281,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
                           </div>
                           <div className="flex-1 text-left">
                             <p className="font-medium text-gray-900">{usuario.nombre}</p>
-                            <p className="text-xs text-gray-500">{usuario.tipo === 'vip' ? '⭐ VIP' : '👥 Amigo'}</p>
+                            <p className="text-xs text-gray-500">{usuario.esAmigo ? '👥 Amigo' : '👤 Usuario'}</p>
                           </div>
                           <span className="text-2xl">➕</span>
                         </button>
@@ -549,3 +564,4 @@ const RestaurantSection = () => {
 }
 
 export default RestaurantSection;
+

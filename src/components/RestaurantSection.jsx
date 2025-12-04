@@ -250,7 +250,7 @@ const RestaurantSection = () => {
                 direccion: r.direccion,
                 distrito: r.distrito,
                 categoria: r.categoria,
-                imagen: r.url_imagen || 'https://via.placeholder.com/400x300'
+                imagen: r.urlImagen || r.url_imagen || "https://via.placeholder.com/400x300"
             }));
             setRestaurantes(dataFormateada);
         } catch (error) { 

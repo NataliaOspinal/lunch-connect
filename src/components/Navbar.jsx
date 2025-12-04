@@ -4,10 +4,10 @@ import { isAuthenticated, logoutUser } from '../services/authService';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate(); // <--- IMPORTANTE: Inicializar hook
-  
-  // Verificamos si hay sesión
-  const isUserLoggedIn = isAuthenticated(); 
+  const navigate = useNavigate(); // <--- IMPORTANTE: Inicializar
+
+  // Verificamos si hay token real
+  const isUserLoggedIn = isAuthenticated();
 
   const handleLogout = () => {
     logoutUser(); 
@@ -37,37 +37,50 @@ const Navbar = () => {
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/explorar" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</Link>
           <Link to="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</Link>
-          
+
+          {/* LÓGICA DE ICONO DE PERFIL */}
           {isUserLoggedIn ? (
             <div className="flex items-center gap-4">
-               <Link to="/perfil" className="hover:scale-110 transition-transform duration-300">
-                <button className="p-2 rounded-full hover:cursor-pointer border-2 border-transparent hover:border-white/50">
-                  <img className="h-12 w-12 rounded-full bg-white" src="/account_circle.png" alt="Perfil" />
-                </button>
+
+              {/* Icono perfil */}
+              <Link
+                to="/perfil"
+                className="p-2 rounded-full border-2 border-transparent hover:border-white/50 
+                 hover:scale-110 transition-transform duration-300 cursor-pointer"
+              >
+                <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
               </Link>
-              <button onClick={handleLogout} className="text-sm font-semibold hover:underline">Salir</button>
+
+              {/* Botón logout */}
+              <button
+                onClick={handleLogout}
+                className="text-sm font-bold hover:underline"
+              >
+                Salir
+              </button>
+
             </div>
           ) : (
-            <Link to="/login" className="hover:scale-110 transition-transform duration-300">
-              <button className="p-2 rounded-full hover:cursor-pointer flex items-center gap-2">
-                 <span className='font-semibold'>Ingresar</span>
-                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-              </button>
+            <Link
+              to="/login"
+              className="p-2 rounded-full border-2 border-transparent hover:border-white/50 
+               hover:scale-110 transition-transform duration-300 cursor-pointer"
+            >
+              <img className="h-12 w-12 rounded-full" src="/account_circle.png" alt="Mi Perfil" />
             </Link>
           )}
+
         </div>
       </div>
       
       {/* MENÚ MÓVIL */}
       {isOpen && (
-        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 border-t border-secondary">
-          <Link to="/explorar" className="py-4 text-center border-b border-secondary hover:bg-secondary">Explorar</Link>
-          <Link to="/unete" className="py-4 text-center border-b border-secondary hover:bg-secondary">Unete</Link>
-          {isUserLoggedIn ? (
-             <Link to="/perfil" className="py-4 text-center hover:bg-secondary">Mi Perfil</Link>
-          ) : (
-             <Link to="/login" className="py-4 text-center hover:bg-secondary">Iniciar Sesión</Link>
-          )}
+        <div className="md:hidden absolute top-full left-0 w-full bg-primary shadow-xl rounded-b-lg flex flex-col mt-2 overflow-hidden border-t border-secondary">
+          <Link to="/explorar" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Explorar</Link>
+          <Link to="/unete" onClick={closeMenu} className="text-center font-medium py-4 border-b border-secondary hover:bg-secondary w-full block">Únete</Link>
+          <Link to={isUserLoggedIn ? '/perfil' : '/login'} onClick={closeMenu} className="flex justify-center py-4 hover:bg-secondary w-full cursor-pointer">
+            Perfil
+          </Link>
         </div>
       )}
     </nav>

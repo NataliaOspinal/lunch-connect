@@ -1,20 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';  
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home'; // Asegúrate de crear este archivo con el código del Paso 2
 import Unete from './pages/Unete'; // La nueva página
 import Explorar from './pages/Explorar';
 import Login from './pages/Login';
 import Registro from './pages/Registro';
+import Perfil from './pages/Perfil';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   return (
     <BrowserRouter>
       <Routes>
         {/* Ruta principal (Home) */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home isAuthenticated={isAuthenticated} />} />
         
         {/* Nueva ruta (/Unete) */}
-        <Route path="/unete" element={<Unete />} />
+        <Route path="/unete" element={<Unete isAuthenticated={isAuthenticated} />} />
         
         {/* Nueva ruta (/Explorar) */}
         <Route path="/explorar" element={<Explorar />} />
@@ -22,6 +24,8 @@ function App() {
         {/* Rutas de Login y Registro */}
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+
+        <Route path="/perfil" element={<Perfil />} />
       </Routes>
     </BrowserRouter>
   );

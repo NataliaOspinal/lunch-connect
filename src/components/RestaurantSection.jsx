@@ -1,3 +1,5 @@
+
+
 import { useState } from 'react';
 
 // Componente CreateGroup mejorado
@@ -28,6 +30,14 @@ const CreateGroup = ({ onClose, restaurante }) => {
     { id: 8, nombre: 'Daniel Vargas', esAmigo: false, avatar: 'D' },
   ];
 
+  // Filtrar usuarios según la búsqueda y el checkbox "Solo Amigos"
+  const usuariosFiltrados = listaAmigos.filter(usuario => {
+    const coincideBusqueda = usuario.nombre.toLowerCase().includes(busqueda.toLowerCase());
+    const noEstaAgregado = !invitados.find(inv => inv.id === usuario.id);
+    const cumpleFiltroAmigos = soloAmigos ? usuario.esAmigo : true;
+    
+    return coincideBusqueda && noEstaAgregado && cumpleFiltroAmigos;
+  });
   // Filtrar usuarios según la búsqueda (sin filtro por soloAmigos)
   const usuariosFiltrados = listaAmigos.filter(usuario =>
     usuario.nombre.toLowerCase().includes(busqueda.toLowerCase()) &&
@@ -176,7 +186,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
               alt={restaurante.nombre}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/30 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
               <h1 className="text-3xl font-bold mb-2 drop-shadow-lg">{restaurante.nombre}</h1>
               <div className="flex items-center text-sm opacity-95 drop-shadow">

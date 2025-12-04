@@ -43,6 +43,12 @@ const ResultsSection = () => {
         onClose={() => setSelectedEvent(null)} 
         event={selectedEvent} 
       />
+      {/* RENDERIZAR MODAL */}
+      <EventModal 
+        isOpen={!!selectedEvent} 
+        onClose={() => setSelectedEvent(null)} 
+        event={selectedEvent} 
+      />
       <div className="max-w-7xl mx-auto px-6">
         
         {/* --- HEADER: TÍTULO + VARIABLE TEMPORAL --- */}
@@ -61,7 +67,7 @@ const ResultsSection = () => {
             <div
               key={item.id}
               className="bg-primary rounded-3xl p-6 text-white shadow-lg flex flex-col lg:flex-row gap-8 items-start lg:items-center"
-            >
+              >
               
               {/* COLUMNA 1: INFO PRINCIPAL (40% del ancho en PC) */}
               <div className="w-full lg:w-5/12 flex flex-col gap-4">
@@ -77,7 +83,7 @@ const ResultsSection = () => {
                 {/* Imagen + Dirección + Aforo */}
                 <div className="flex gap-4 mt-2">
                   {/* Imagen Placeholder */}
-                  <div className="w-24 h-24 bg-secondary/50 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-24 h-24 bg-secondary/50 rounded-xl flex items-center justify-center shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white/20" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                     </svg>

@@ -35,8 +35,8 @@ const Login = () => {
       // Login usando authService.js
       await loginUser(formData.identificador, formData.password);
 
-      // Redirigir al dashboard si login exitoso
-      navigate('/dashboard');
+      // Redirigir a Home si login exitoso
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión.');
     } finally {

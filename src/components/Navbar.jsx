@@ -33,7 +33,7 @@ const Navbar = () => {
           </svg>
         </button>
 
-        {/* MENÚ DE ESCRITORIO */}
+        {/* Menú escritorio */}
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/explorar" className="hover:scale-110 font-medium transition-transform duration-300">Explorar</Link>
           <Link to="/unete" className="hover:scale-110 font-medium transition-transform duration-300">Unete</Link>

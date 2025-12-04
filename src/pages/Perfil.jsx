@@ -110,22 +110,19 @@ const Perfil = () => {
           <div className="bg-primary rounded-b-[2.5rem] rounded-tr-[2.5rem] p-8 md:p-16 shadow-2xl">
             
             {/* Grid: Izquierda (Avatar) - Derecha (Formulario) */}
-            {activeTab === 'datos' && (
+            {/* Grid: Izquierda (Avatar) - Derecha (Formulario) */}
+          {activeTab === 'datos' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
 
               {/* COLUMNA IZQUIERDA: Avatar y Títulos */}
               <div className="col-span-1 flex flex-col items-center gap-6">
                 
-                {/* Avatar con icono de edición */}
                 <div className="relative">
                   <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center border-4 border-secondary overflow-hidden">
-                    {/* Icono de usuario por defecto (SVG Grande) */}
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-32 h-32">
                       <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
                     </svg>
                   </div>
-                  
-                  {/* Botón de Clip/Editar (Icono pequeño) */}
                   <button className="absolute bottom-2 right-2 bg-secondary border-2 border-white p-2 rounded-full text-white hover:bg-red-900 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
@@ -133,7 +130,6 @@ const Perfil = () => {
                   </button>
                 </div>
 
-                {/* Dropdown de Títulos */}
                 <div className="w-full">
                   <label className="text-white font-bold text-lg mb-2 block text-center">
                     Títulos desbloqueados
@@ -145,7 +141,6 @@ const Perfil = () => {
                       <option>Rey del Buffet</option>
                       <option>Networking Master</option>
                     </select>
-                    {/* Flecha personalizada del select */}
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -153,7 +148,6 @@ const Perfil = () => {
                     </div>
                   </div>
                 </div>
-
               </div>
 
               {/* COLUMNA DERECHA: Inputs */}
@@ -162,7 +156,17 @@ const Perfil = () => {
                 <InputField label="Actualizar contraseña" type="password" id="new-password" />
                 <InputField label="LinkedIn" id="linkedin-profile" />
               </div>
-            </div>)}
+
+              {/* --- AQUÍ ESTÁ EL CAMBIO CLAVE --- */}
+              {/* Agregamos 'col-span-1 md:col-span-3' para que ocupe todo el ancho y se pueda centrar */}
+              <div className="col-span-1 md:col-span-3 flex justify-center mt-8 font-secondary">
+                <button className="bg-secondary hover:bg-red cursor-pointer text-white font-semibold py-3 px-12 rounded-xl transition-colors shadow-lg text-lg">
+                  Guardar cambios
+                </button>
+              </div>
+
+            </div>
+          )}
 
             {/* ---------------- CONTENIDO DE GRUPOS (NUEVO) ---------------- */}
             {activeTab === 'grupos' && (
@@ -338,12 +342,7 @@ const Perfil = () => {
           </div>
           
 
-          {/* Botón Guardar (Fuera del contenedor rojo) */}
-          <div className="flex justify-center mt-8 font-secondary">
-            <button className="bg-primary hover:bg-[#4a1313] cursor-pointer text-white font-semibold py-3 px-12 rounded-xl transition-colors shadow-lg text-lg">
-              Guardar cambios
-            </button>
-          </div>
+          
 
         </div>
       </main>

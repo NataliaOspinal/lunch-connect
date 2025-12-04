@@ -2,25 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isAuthenticated, getToken } from '../services/authService';
 
-// --- HELPER: Obtener ID del usuario desde el JWT ---
-const getUserIdFromToken = () => {
-  const token = getToken();
-  if (!token) return null;
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-    const decoded = JSON.parse(jsonPayload);
-    // Ajusta esto: puede ser 'id', 'userId', 'sub' o 'id_usuario' dependiendo de tu backend Java/Node
-    return decoded.id || decoded.userId || decoded.sub; 
-  } catch (e) {
-    console.error("Error al decodificar token", e);
-    return null;
-  }
-};
-
 // --- COMPONENTE INTERNO: CreateGroup (Modal) ---
 const CreateGroup = ({ onClose, restaurante }) => {
   const [nombreGrupo, setNombreGrupo] = useState('');
@@ -33,7 +14,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
   const [invitados, setInvitados] = useState([]);
   const [busqueda, setBusqueda] = useState('');
 
-  // Simulación de amigos (Frontend puro por ahora)
+  // Simulación de amigos
   const listaAmigos = [
     { id: 101, nombre: 'Carlos Mendoza', esAmigo: true, avatar: 'C' },
     { id: 102, nombre: 'María García', esAmigo: true, avatar: 'M' },
@@ -64,12 +45,13 @@ const CreateGroup = ({ onClose, restaurante }) => {
     setMostrarConfirmacion(true);
   };
 
+  // --- FUNCIÓN CORREGIDA ---
   const finalizarReserva = async () => {
     setIsSubmitting(true);
     const token = getToken();
-    const creadorId = getUserIdFromToken();
 
-    if (!token || !creadorId) {
+    // Solo verificamos que exista el token (sesión activa)
+    if (!token) {
         alert("Tu sesión ha expirado. Por favor inicia sesión nuevamente.");
         onClose();
         return;
@@ -77,12 +59,13 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
     const fechaHoraISO = `${dia}T${hora}:00`;
 
+    // CORRECCIÓN: Quitamos 'creadorId' del payload.
+    // El backend leerá el usuario desde el 'Authorization: Bearer token'
     const payload = {
       nombreGrupo: nombreGrupo,
       maxMiembros: parseInt(capacidad),
       fechaHoraAlmuerzo: fechaHoraISO,
-      restauranteId: restaurante.id,
-      creadorId: creadorId 
+      restauranteId: parseInt(restaurante.id)
     };
 
     try {
@@ -90,7 +73,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}` // Aquí va la identidad del creador
         },
         body: JSON.stringify(payload)
       });
@@ -98,8 +81,10 @@ const CreateGroup = ({ onClose, restaurante }) => {
       if (response.ok) {
         alert('¡Grupo creado exitosamente!');
         onClose();
+        // Opcional: window.location.reload() para actualizar la lista de eventos
       } else {
         const errorData = await response.json();
+        console.error("Error del servidor:", errorData);
         alert(`Error al crear: ${errorData.message || 'Verifica los datos'}`);
       }
     } catch (error) {
@@ -117,12 +102,11 @@ const CreateGroup = ({ onClose, restaurante }) => {
         <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="p-8">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-3xl bg-[#601919]">✓</div>
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-3xl bg-primary">✓</div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Resumen</h2>
                 <p className="text-gray-600">Confirma los detalles de tu grupo</p>
               </div>
 
-              {/* TEXTO OSCURO AQUÍ */}
               <div className="bg-gray-50 p-4 rounded-lg mb-6 space-y-2 border border-gray-200 text-gray-800">
                  <p><span className="font-bold">Grupo:</span> {nombreGrupo}</p>
                  <p><span className="font-bold">Restaurante:</span> {restaurante.nombre}</p>
@@ -131,8 +115,8 @@ const CreateGroup = ({ onClose, restaurante }) => {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setMostrarConfirmacion(false)} disabled={isSubmitting} className="flex-1 py-3 border-2 border-[#601919] text-[#601919] font-bold rounded-xl">Editar</button>
-                <button onClick={finalizarReserva} disabled={isSubmitting} className="flex-1 py-3 bg-[#601919] text-white font-bold rounded-xl hover:bg-[#4a1313]">
+                <button onClick={() => setMostrarConfirmacion(false)} disabled={isSubmitting} className="flex-1 py-3 border-2 border-primary text-primary font-bold rounded-xl">Editar</button>
+                <button onClick={finalizarReserva} disabled={isSubmitting} className="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-[#4a1313]">
                     {isSubmitting ? 'Creando...' : 'Confirmar'}
                 </button>
               </div>
@@ -150,23 +134,23 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
         <div className="relative h-48">
             <img src={restaurante.imagen} alt={restaurante.nombre} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+            <div className="absolute inset-0 bg-linear-to-t from-black/80 to-transparent"></div>
             <div className="absolute bottom-4 left-6 text-white">
                 <h2 className="text-2xl font-bold">{restaurante.nombre}</h2>
                 <p className="text-sm opacity-90">{restaurante.direccion}</p>
             </div>
         </div>
 
-        <div className="p-6 space-y-5 text-gray-800"> {/* TEXTO GRIS OSCURO */}
+        <div className="p-6 space-y-5 text-gray-800">
             <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Nombre del Grupo</label>
-                <input type="text" value={nombreGrupo} onChange={(e) => setNombreGrupo(e.target.value)} className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-[#601919] outline-none text-black" placeholder="Ej: Los Comelones" />
+                <input type="text" value={nombreGrupo} onChange={(e) => setNombreGrupo(e.target.value)} className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-primary outline-none text-black" placeholder="Ej: Los Comelones" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                     <label className="block text-sm font-bold text-gray-700 mb-1">Capacidad Máxima</label>
-                    <input type="number" min="2" value={capacidad} onChange={(e) => setCapacidad(e.target.value)} className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-[#601919] outline-none text-black" placeholder="Ej: 5" />
+                    <input type="number" min="2" value={capacidad} onChange={(e) => setCapacidad(e.target.value)} className="w-full border border-gray-300 p-3 rounded-xl focus:ring-2 focus:ring-primary outline-none text-black" placeholder="Ej: 5" />
                 </div>
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Día</label>
@@ -179,7 +163,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
             </div>
 
             <label className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl cursor-pointer">
-                <input type="checkbox" checked={soloAmigos} onChange={(e) => setSoloAmigos(e.target.checked)} className="w-5 h-5 accent-[#601919]" />
+                <input type="checkbox" checked={soloAmigos} onChange={(e) => setSoloAmigos(e.target.checked)} className="w-5 h-5 accent-primary" />
                 <div>
                     <p className="font-bold text-gray-800">🔒 Solo Amigos</p>
                     <p className="text-xs text-gray-500">Solo personas en tu lista podrán unirse</p>
@@ -195,7 +179,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
                         {usuariosFiltrados.map(user => (
                             <div key={user.id} onClick={() => agregarInvitado(user)} className="p-2 hover:bg-gray-100 cursor-pointer flex items-center justify-between text-black">
                                 <span className="text-sm">{user.nombre}</span>
-                                <span className="text-xs font-bold text-[#601919]">+</span>
+                                <span className="text-xs font-bold text-primary">+</span>
                             </div>
                         ))}
                     </div>
@@ -203,7 +187,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
 
                 <div className="flex flex-wrap gap-2">
                     {invitados.map(inv => (
-                        <span key={inv.id} className="bg-[#601919]/10 text-[#601919] px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2">
+                        <span key={inv.id} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2">
                             {inv.nombre}
                             <button onClick={() => eliminarInvitado(inv.id)} className="hover:text-red-700 font-bold">✕</button>
                         </span>
@@ -211,7 +195,7 @@ const CreateGroup = ({ onClose, restaurante }) => {
                 </div>
             </div>
 
-            <button onClick={confirmarReserva} className="w-full py-4 bg-[#601919] text-white font-bold rounded-xl shadow-lg hover:bg-[#4a1313] transition-transform active:scale-95">
+            <button onClick={confirmarReserva} className="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg hover:bg-[#4a1313] transition-transform active:scale-95">
                 Continuar
             </button>
         </div>
@@ -234,17 +218,14 @@ const RestaurantSection = () => {
   useEffect(() => {
     const fetchRestaurantes = async () => {
         try {
-            console.log("Iniciando fetch...");
             const response = await fetch('https://lunchconnect-backend.onrender.com/api/restaurantes');
-            console.log("Respuesta API:", response);
-            
             if (!response.ok) throw new Error("Error en la respuesta del servidor");
             
             const data = await response.json();
-            console.log("Datos JSON:", data);
 
+            // Mapeo robusto: busca 'id' o 'id_restaurante'
             const dataFormateada = data.map(r => ({
-                id: r.id_restaurante,
+                id: r.id || r.id_restaurante,
                 nombre: r.nombre,
                 rating: r.calificacion_promedio || 4.5,
                 direccion: r.direccion,
@@ -292,7 +273,7 @@ const RestaurantSection = () => {
         <div className="grid md:grid-cols-2 gap-6 mb-12">
             <div className="flex items-center gap-3">
                 <label className="text-gray-700 font-medium">Categoría:</label>
-                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="flex-1 bg-[#601919] text-white p-2 rounded">
+                <select value={categoria} onChange={(e) => setCategoria(e.target.value)} className="flex-1 bg-primary text-white p-2 rounded">
                     <option value="">Todas</option>
                     <option value="chifa">Chifa</option>
                     <option value="italiana">Italiana</option>
@@ -301,7 +282,7 @@ const RestaurantSection = () => {
             </div>
             <div className="flex items-center gap-3">
                 <label className="text-gray-700 font-medium">Ubicación:</label>
-                <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} className="flex-1 bg-[#601919] text-white p-2 rounded">
+                <select value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} className="flex-1 bg-primary text-white p-2 rounded">
                     <option value="">Todas</option>
                     <option value="miraflores">Miraflores</option>
                     <option value="san isidro">San Isidro</option>
@@ -324,7 +305,7 @@ const RestaurantSection = () => {
                             <h3 className="text-lg font-semibold text-gray-900 truncate">{restaurante.nombre}</h3>
                             <p className="text-gray-600 text-sm mb-1 truncate">📍 {restaurante.direccion}</p>
                         </div>
-                        <button onClick={() => abrirModal(restaurante)} className="w-full bg-[#601919] text-white py-2 px-4 rounded hover:bg-[#7b3c3c] transition-colors font-medium mt-auto">
+                        <button onClick={() => abrirModal(restaurante)} className="w-full bg-primary text-white py-2 px-4 rounded hover:bg-[#7b3c3c] transition-colors font-medium mt-auto">
                             Arma tu grupo
                         </button>
                     </div>

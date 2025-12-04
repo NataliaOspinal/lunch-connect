@@ -92,7 +92,7 @@ const Perfil = () => {
           </h1>
           <button
             onClick={handleLogout}
-            className="bg-red-600 hover:bg-red-800 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors"
+            className="bg-secondary hover:bg-red-800 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors"
           >
             Cerrar sesión
           </button>

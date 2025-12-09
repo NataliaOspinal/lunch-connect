@@ -102,21 +102,21 @@ const FeaturedEvents = () => {
             className="flex gap-4 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide w-full"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {/* 💡 Usar el estado 'events' en lugar de 'mockEvents' */}
             {events.map((event) => (
               <div
-                // Asume que el objeto del backend tiene una propiedad 'id'
                 key={event.id}
                 className="flex-none min-w-full md:min-w-[500px] bg-primary rounded-2xl p-6 text-white snap-center shadow-lg relative"
               >
                 {/* HEADER TARJETA */}
                 <div className="flex justify-between items-start mb-4">
-                  {/* ⚠️ Mapear el campo 'title' (frontend) a 'nombre' u otro campo del backend */}
-                  <h3 className="text-2xl font-bold">{event.title || event.nombre}</h3>
+                  {/* 1. TÍTULO: Usar 'nombreGrupo' */}
+                  <h3 className="text-2xl font-bold">{event.nombreGrupo}</h3>
                   <div className="flex items-center gap-1 text-xl font-semibold">
-                    {/* ⚠️ Mapear los campos de usuarios */}
-                    <span>{event.currentUsers || 0}/{event.maxUsers || event.capacidad}</span>
-                    <svg /* ... icon ... */ />
+                    {/* 2. USUARIOS: Usar 'participantesCount' y 'maxMiembros' */}
+                    <span>{event.participantesCount}/{event.maxMiembros}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                   </div>
                 </div>
 
@@ -144,24 +144,39 @@ const FeaturedEvents = () => {
                   {/* Información */}
                   <div className="w-full md:w-2/3 flex flex-col justify-between gap-4 md:gap-0">
                     <div>
-                      <p className="text-sm font-bold mb-1">Dirección: <span className="font-normal text-gray-200">{event.address}</span></p>
+                      {/* 3. DIRECCIÓN: Usar 'restauranteDireccion' y 'restauranteDistrito' */}
+                      <p className="text-sm font-bold mb-1">
+                        Dirección:
+                        <span className="font-normal text-gray-200">
+                          {event.restauranteDireccion}, {event.restauranteDistrito}
+                        </span>
+                      </p>
+                      {/* Podemos agregar aquí más detalles, como la fecha y hora */}
+                      <p className="text-sm font-bold mb-1">
+                        Fecha:
+                        <span className="font-normal text-gray-200">
+                          {new Date(event.fechaHoraAlmuerzo).toLocaleString('es-PE', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </p>
                     </div>
 
                     <div>
                       <p className="text-sm font-bold mb-2">Carreras:</p>
                       <div className="flex flex-wrap gap-2">
-                        {event.careers.map((career, index) => (
-                          <span
-                            key={index}
-                            className="bg-white/20 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap"
-                          >
-                            {career}
-                          </span>
-                        ))}
+                        {/* 4. CARRERAS: Esta propiedad no existe en tu JSON, se reemplaza por un placeholder hasta que el backend la proporcione. */}
+                        <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                          💡 No hay datos de carrera disponibles
+                        </span>
                       </div>
                     </div>
-                  </div>
 
+                  </div>
                 </div>
               </div>
             ))}

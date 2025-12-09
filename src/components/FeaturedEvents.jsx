@@ -1,49 +1,51 @@
-import React, { useRef, useState} from "react";
+import { useRef, useState } from "react";
 import EventModal from "./EventModal";
 
 const FeaturedEvents = () => {
   const scrollRef = useRef(null);
-
   const [selectedEvent, setSelectedEvent] = useState(null);
 
-  const mockEvents = [
-    {
-      id: 1,
-      title: "Chifa LongWa",
-      currentUsers: 4,
-      maxUsers: 5,
-      address: "Av. Avenida 999, Lince, Lima-Perú",
-      careers: ["Diseño gráfico", "Ing. Industrial", "Ing. Sistemas"],
-      image: null,
-    },
-    {
-      id: 2,
-      title: "Shawarma El Egipcio",
-      currentUsers: 9,
-      maxUsers: 15,
-      address: "Jr Julio Cesar Tello 872, Lince, Lima",
-      careers: ["Administración", "Ing. Industrial", "Marketing", "Y otras 6 más..."],
-      image: null,
-    },
-    {
-      id: 3,
-      title: "Bembos Larco",
-      currentUsers: 2,
-      maxUsers: 4,
-      address: "Av. Larco 123, Miraflores, Lima",
-      careers: ["Arquitectura", "Ing. Civil"],
-      image: null,
-    },
-    {
-      id: 4,
-      title: "Starbucks 2 de Mayo",
-      currentUsers: 5,
-      maxUsers: 5,
-      address: "Av. 2 de Mayo, San Isidro",
-      careers: ["Todas las carreras"],
-      image: null,
-    },
-  ];
+  // 💡 Estado para almacenar los grupos reales de la BD
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // =========================================================
+  // 💡 LÓGICA DE CARGA DE DATOS DESDE LA API (useEffect)
+  // =========================================================
+  useEffect(() => {
+    const fetchGroups = async () => {
+      const API_URL = "TU_URL_DE_RENDER_AQUI/api/grupos"; // ⚠️ REEMPLAZA ESTO
+
+      try {
+        setLoading(true);
+        const response = await fetch(API_URL);
+
+        if (!response.ok) {
+          // Si el servidor responde con un error HTTP (4xx, 5xx)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        // Asume que tu API de Spring Boot devuelve una lista de objetos Grupo
+        const data = await response.json();
+
+        // ⚠️ Nota: Tendrás que mapear los campos del backend (ej: 'nombre', 'capacidad') 
+        // a los campos del frontend (ej: 'title', 'maxUsers') si no coinciden.
+        setEvents(data);
+        setError(null);
+
+      } catch (err) {
+        console.error("Error al obtener grupos:", err);
+        setError("No se pudieron cargar los grupos. ¿Está el backend corriendo?");
+        // Opcional: Si falla, puedes cargar los mocks para que la UI no esté vacía
+        // setEvents(mockEvents); 
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroups();
+  }, []); // El array vacío asegura que solo se ejecuta al montar
 
   const scrollLeft = () => {
     if (scrollRef.current) {
@@ -69,17 +71,23 @@ const FeaturedEvents = () => {
 
   return (
     <section className="py-12 w-full bg-white relative">
-      <EventModal 
-        isOpen={!!selectedEvent} 
-        onClose={handleCloseModal} 
-        event={selectedEvent} 
+      <EventModal
+        isOpen={!!selectedEvent}
+        onClose={handleCloseModal}
+        event={selectedEvent}
       />
       <div className="max-w-7xl mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-primary mb-10 font-primary">
           Eventos destacados
         </h2>
 
+        {/* 💡 Estados de Carga y Error */}
+        {loading && <p className="text-center text-primary text-lg">Cargando grupos...</p>}
+        {error && <p className="text-center text-red-500 text-lg font-bold">{error}</p>}
+
         <div className="relative flex items-center group">
+
+
           {/* Flecha Izquierda (Oculta en móvil) */}
           <button
             onClick={scrollLeft}
@@ -91,33 +99,34 @@ const FeaturedEvents = () => {
           {/* CONTENEDOR DEL SLIDER */}
           <div
             ref={scrollRef}
-            // snap-x y snap-mandatory son claves para el efecto "uno por uno"
             className="flex gap-4 overflow-x-auto pb-8 snap-x snap-mandatory scrollbar-hide w-full"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
-            {mockEvents.map((event) => (
+            {/* 💡 Usar el estado 'events' en lugar de 'mockEvents' */}
+            {events.map((event) => (
               <div
+                // Asume que el objeto del backend tiene una propiedad 'id'
                 key={event.id}
                 className="flex-none min-w-full md:min-w-[500px] bg-primary rounded-2xl p-6 text-white snap-center shadow-lg relative"
               >
                 {/* HEADER TARJETA */}
                 <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-2xl font-bold">{event.title}</h3>
+                  {/* ⚠️ Mapear el campo 'title' (frontend) a 'nombre' u otro campo del backend */}
+                  <h3 className="text-2xl font-bold">{event.title || event.nombre}</h3>
                   <div className="flex items-center gap-1 text-xl font-semibold">
-                    <span>{event.currentUsers}/{event.maxUsers}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+                    {/* ⚠️ Mapear los campos de usuarios */}
+                    <span>{event.currentUsers || 0}/{event.maxUsers || event.capacidad}</span>
+                    <svg /* ... icon ... */ />
                   </div>
                 </div>
 
                 {/* BODY TARJETA */}
                 <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-                  
+
                   {/* Imagen + Botón */}
                   <div className="w-full md:w-1/3 flex flex-col gap-3">
                     <div className="aspect-square bg-secondary/50 rounded-lg flex items-center justify-center h-32 md:h-auto">
-                       {/* Nota: Forcé h-32 en móvil para que la imagen no sea gigante verticalmente */}
+                      {/* Nota: Forcé h-32 en móvil para que la imagen no sea gigante verticalmente */}
                       {event.image ? (
                         <img src={event.image} alt={event.title} className="w-full h-full object-cover rounded-lg" />
                       ) : (
@@ -126,7 +135,7 @@ const FeaturedEvents = () => {
                         </svg>
                       )}
                     </div>
-                    
+
                     <button onClick={() => handleOpenModal(event)} className="w-full py-2 cursor-pointer bg-secondary rounded-full font-semibold hover:bg-black transition-colors text-sm">
                       Únete
                     </button>
@@ -137,13 +146,13 @@ const FeaturedEvents = () => {
                     <div>
                       <p className="text-sm font-bold mb-1">Dirección: <span className="font-normal text-gray-200">{event.address}</span></p>
                     </div>
-                    
+
                     <div>
                       <p className="text-sm font-bold mb-2">Carreras:</p>
                       <div className="flex flex-wrap gap-2">
                         {event.careers.map((career, index) => (
-                          <span 
-                            key={index} 
+                          <span
+                            key={index}
                             className="bg-white/20 text-white text-xs px-3 py-1 rounded-full whitespace-nowrap"
                           >
                             {career}

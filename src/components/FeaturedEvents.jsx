@@ -15,7 +15,7 @@ const FeaturedEvents = () => {
   // =========================================================
   useEffect(() => {
     const fetchGroups = async () => {
-      const API_URL = "TU_URL_DE_RENDER_AQUI/api/grupos"; // ⚠️ REEMPLAZA ESTO
+      const API_URL = "https://lunchconnect-backend.onrender.com/api/grupos"; // ⚠️ REEMPLAZA ESTO
 
       try {
         setLoading(true);

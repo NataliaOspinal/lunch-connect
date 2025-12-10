@@ -5,9 +5,12 @@ import InputField from '../components/ui/InputField';
 import { useNavigate } from 'react-router-dom';
 import { logoutUser, getToken } from '../services/authService'; // Importamos getToken
 
-const Perfil = () => {
+const Perfil = ({ onOpenChat }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('datos');
+
+  // Estado para controlar qué chat está abierto
+  const [activeChat, setActiveChat] = useState(null);
   
   // Estado para los grupos reales que vienen de la API
   const [userGroups, setUserGroups] = useState([]);
@@ -47,8 +50,8 @@ const Perfil = () => {
         
         // Mapear los datos de la DB a la estructura visual de tu tarjeta
         const mappedGroups = data.map(grupo => ({
-          id: grupo.id, // o grupo.id_grupo
-          name: grupo.nombreGrupo, // Según tu Postman es nombreGrupo
+          id: grupo.id,
+          name: grupo.nombreGrupo,
           // Formatear fecha y hora
           date: new Date(grupo.fechaHoraAlmuerzo).toLocaleDateString(),
           time: new Date(grupo.fechaHoraAlmuerzo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -70,11 +73,11 @@ const Perfil = () => {
     };
 
     // Llamamos a la función solo si estamos en la pestaña grupos (opcional, para optimizar)
-    // O la llamamos siempre al inicio. Aquí lo haré al inicio.
+    // O la llamamos siempre al inicio. 
     fetchUserGroups();
   }, []); // Se ejecuta una vez al montar
 
-  // --- DATOS MOCK PARA HISTORIAL Y AMIGOS (Se mantienen igual por ahora) ---
+  // --- DATOS MOCK PARA HISTORIAL Y AMIGOS---
   const historyGroups = [
     {
       id: 101,
@@ -104,6 +107,13 @@ const Perfil = () => {
   const handleLogout = () => {
     logoutUser();
     navigate('/login');
+  };
+
+  // Función para abrir el chat
+  const handleOpenChat = (groupName) => {
+    if (onOpenChat) {
+      onOpenChat(groupName);
+    }
   };
 
   return (
@@ -218,12 +228,23 @@ const Perfil = () => {
                       <div className="bg-white rounded-4xl p-6 flex flex-col lg:flex-row gap-6 items-stretch shadow-lg">
 
                         {/* 1. Icono/Imagen */}
-                        <div className="w-full lg:w-auto shrink-0 flex justify-center">
+                        <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
                           <div className="w-32 h-32 bg-secondary rounded-2xl flex items-center justify-center border-4 border-secondary">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16">
                               <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
                             </svg>
                           </div>
+                          
+                          {/* BOTÓN "VER CHAT GRUPAL" */}
+                          <button 
+                            onClick={() => handleOpenChat(group.name)} // <--- USAMOS LA PROP AQUÍ
+                            className="cursor-pointer mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-[#7b3c3c] hover:scale-105 transition-all"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 01-.814 1.686.75.75 0 00.44 1.223zM8.25 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM10.875 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zm4.875-1.125a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z" clipRule="evenodd" />
+                            </svg>
+                            Chat grupal
+                          </button>
                         </div>
 
                         {/* 2. Información Central */}
@@ -271,8 +292,6 @@ const Perfil = () => {
                   <div key={group.id}>
                     <h3 className="text-white text-xl font-medium mb-3 ml-2">{group.name}</h3>
                     <div className="border-[3px] border-[#F6E7E7] bg-[#7E3333] rounded-4xl p-6 flex flex-col lg:flex-row gap-6 items-stretch">
-                      {/* ... (Tu código de historial igual que antes) ... */}
-                      {/* Solo para no hacer el código gigante, aquí iría el mismo bloque de renderizado de tarjeta historial que tenías */}
                       <div className="w-full lg:w-auto shrink-0 flex justify-center">
                         <div className="w-32 h-32 bg-secondary rounded-2xl flex items-center justify-center border-4 border-secondary/50">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16 opacity-50">
@@ -350,6 +369,7 @@ const Perfil = () => {
       </main>
 
       <Footer />
+
     </div>
   );
 };

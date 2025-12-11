@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "../services/authService";
-import SockJS from "sockjs-client/dist/sockjs";
-import { Client } from "@stomp/stompjs";
 
 const getUserIdFromToken = () => {
   const token = getToken();
@@ -27,34 +25,30 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
 
+  // MOVE IT HERE BRO 🔥
+  const socketRef = useRef(null);
+
   const messagesEndRef = useRef(null);
-  const stompClient = useRef(null);
 
   const myId = getUserIdFromToken();
 
-  // 1. Conectar WebSocket (SockJS obligatorio en Render)
+  // 1. Conectar WebSocket
   useEffect(() => {
     const token = getToken();
 
-    const client = new Client({
-      reconnectDelay: 3000,
-      debug: () => {},
+    const socket = new WebSocket(
+      `wss://lunchconnect-backend.onrender.com/ws?token=${token}`
+    );
 
-      webSocketFactory: () =>
-        new SockJS("https://lunchconnect-backend.onrender.com/ws", null, {
-          transports: ["websocket", "xhr-streaming", "xhr-polling"],
-        }),
+    socket.onopen = () => {
+      console.log("WebSocket conectado!");
+    };
 
-      connectHeaders: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    socket.onmessage = (event) => {
+      try {
+        const body = JSON.parse(event.data);
 
-    client.onConnect = () => {
-      console.log("WebSocket conectado correctamente con SockJS ✔");
-
-      client.subscribe(`/topic/grupos/${groupId}`, (message) => {
-        const body = JSON.parse(message.body);
+        if (body.grupoId !== groupId) return;
 
         setMessages((prev) => [
           ...prev,
@@ -69,40 +63,42 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
             }),
           },
         ]);
-      });
+      } catch (err) {
+        console.error("Error mensaje WS:", err);
+      }
     };
 
-    client.activate();
-    stompClient.current = client;
+    socket.onerror = (e) => console.error("WS error:", e);
+    socket.onclose = () => console.warn("WS cerrado");
 
-    return () => client.deactivate();
-  }, [groupId, myId]);
+    socketRef.current = socket;
+
+    return () => socket.close();
+  }, [groupId]);
 
   // Scroll automático
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 2. Enviar mensaje
+  // Enviar mensaje
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    if (!stompClient.current || !stompClient.current.connected) {
-      console.warn("STOMP no está conectado todavía");
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      console.warn("WebSocket no conectado aún");
       return;
     }
 
     const msg = {
-      grupoId: groupId.toString(),
+      grupoId: groupId,
       content: newMessage,
-      type: "CHAT",
+      senderId: myId,
+      timestamp: new Date().toISOString(),
     };
 
-    stompClient.current.publish({
-      destination: "/app/chat.sendMessage",
-      body: JSON.stringify(msg),
-    });
+    socketRef.current.send(JSON.stringify(msg));
 
     setNewMessage("");
   };

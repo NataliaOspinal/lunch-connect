@@ -302,12 +302,10 @@ const Perfil = ({ onOpenChat }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
-  // ---------------------------
-  // Función para abrir el chat desde grupo o desde amigo (usa prop onOpenChat)
-  // ---------------------------
-  const handleOpenChatLocal = (groupNameOrUser) => {
-    if (onOpenChat) onOpenChat(groupNameOrUser);
-    setActiveChat(groupNameOrUser);
+  const handleOpenChat = (group) => {
+    if (onOpenChat) {
+      onOpenChat({ id: group.id, name: group.name });
+    }
   };
 
   // ---------------------------
@@ -660,7 +658,7 @@ const Perfil = ({ onOpenChat }) => {
                         </div>
                         <div className="w-full flex justify-center gap-2">
                           <button
-                            onClick={() => handleOpenChatLocal(friend.name)}
+                            //onClick={() => handleOpenChatLocal(friend.name)}
                             className="bg-primary text-white px-4 py-2 rounded-xl"
                           >
                             Chat

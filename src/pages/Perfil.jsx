@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import InputField from '../components/ui/InputField';
@@ -9,75 +9,310 @@ const Perfil = ({ onOpenChat }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('datos');
 
-  // Estado para controlar qué chat está abierto
+  // Estados generales
   const [activeChat, setActiveChat] = useState(null);
-  
-  // Estado para los grupos reales que vienen de la API
   const [userGroups, setUserGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingGroups, setLoadingGroups] = useState(false);
 
-  // --- EFECTO: CARGAR MIS GRUPOS ---
+  // --- AMIGOS: estados ---
+  const [friendsList, setFriendsList] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]); // cada item tiene { id: solicitudId, name, tag, ... }
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]); // cada item: { id, nombre, tag, estado }
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [searching, setSearching] = useState(false);
+
+  // Debounce ref
+  const searchTimeout = useRef(null);
+
+  // ---------------------------
+  // UTIL: logout y manejo 401
+  // ---------------------------
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
+  };
+
+  const handleAuthError = (status) => {
+    if (status === 401 || status === 403) {
+      handleLogout();
+      return true;
+    }
+    return false;
+  };
+
+  // ---------------------------
+  // GRUPOS: carga inicial (igual a tu código)
+  // ---------------------------
   useEffect(() => {
     const fetchUserGroups = async () => {
       const token = getToken();
-      
-      if (!token) {
-        // Si no hay token, no podemos cargar grupos. Redirigir o no hacer nada.
-        return;
-      }
+      if (!token) return;
 
-      setLoading(true);
+      setLoadingGroups(true);
       try {
         const response = await fetch('https://lunchconnect-backend.onrender.com/api/grupos/mis-grupos', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`, // Header de autenticación
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
 
-        if (response.status === 401 || response.status === 403) {
-          // Token inválido o expirado
-          handleLogout();
-          return;
-        }
+        if (handleAuthError(response.status)) return;
 
         if (!response.ok) {
           throw new Error('Error al cargar mis grupos');
         }
 
         const data = await response.json();
-        
-        // Mapear los datos de la DB a la estructura visual de tu tarjeta
+
         const mappedGroups = data.map(grupo => ({
           id: grupo.id,
           name: grupo.nombreGrupo,
-          // Formatear fecha y hora
           date: new Date(grupo.fechaHoraAlmuerzo).toLocaleDateString(),
           time: new Date(grupo.fechaHoraAlmuerzo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          creator: grupo.creadorNombre || "Tú", // Si el backend no manda nombre, asumimos que es el usuario
-          // Datos calculados
-          currentMembers: grupo.participantesCount || 1, 
+          creator: grupo.creadorNombre || "Tú",
+          currentMembers: grupo.participantesCount || 1,
           maxMembers: grupo.maxMiembros,
-          // Generamos miembros visuales (placeholder o reales si el backend los manda)
-          members: grupo.participantes ? grupo.participantes : [{ name: "Tú" }] 
+          members: grupo.participantes ? grupo.participantes : [{ name: "Tú" }]
         }));
 
         setUserGroups(mappedGroups);
-
       } catch (error) {
         console.error("Error fetching user groups:", error);
       } finally {
-        setLoading(false);
+        setLoadingGroups(false);
       }
     };
 
-    // Llamamos a la función solo si estamos en la pestaña grupos (opcional, para optimizar)
-    // O la llamamos siempre al inicio. 
     fetchUserGroups();
-  }, []); // Se ejecuta una vez al montar
+  }, []);
 
-  // --- DATOS MOCK PARA HISTORIAL Y AMIGOS---
+  // ---------------------------
+  // AMIGOS: funciones para llamar al backend
+  // ---------------------------
+
+  // Cargar lista de amigos
+  const cargarAmigos = async () => {
+    const token = getToken();
+    if (!token) return;
+    setLoadingFriends(true);
+    try {
+      const res = await fetch('https://lunchconnect-backend.onrender.com/api/amigos', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error al obtener amigos');
+
+      const data = await res.json();
+      // Suponemos que cada item tiene { id, nombre, tag, role? }
+      setFriendsList(data.map(u => ({
+        id: u.id,
+        name: u.nombre || u.name || u.nombreCompleto || u.nombreUsuario || u.nombreUsuarioPublico || u.nombre,
+        tag: u.tag || u.nombreUsuario || u.nombreUsuarioPublico || '',
+        role: u.role || u.titulo || u.tituloPrincipal || ''
+      })));
+    } catch (e) {
+      console.error("cargarAmigos:", e);
+    } finally {
+      setLoadingFriends(false);
+    }
+  };
+
+  // Cargar solicitudes pendientes
+  const cargarPendientes = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('https://lunchconnect-backend.onrender.com/api/amigos/pendientes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error al obtener pendientes');
+
+      const data = await res.json();
+      // Según tu servicio, cada elemento podría venir con id = solicitudId y name/tag del remitente
+      setPendingRequests(data.map(p => ({
+        id: p.id, // solicitudId según tu mapping del backend
+        userId: p.usuarioId || p.usuario_id || p.userId || null,
+        name: p.nombre || p.name || p.nombreCompleto || '',
+        tag: p.tag || p.nombreUsuario || ''
+      })));
+    } catch (e) {
+      console.error("cargarPendientes:", e);
+    }
+  };
+
+  // Buscar usuarios (debounced)
+  const buscarUsuarios = async (term) => {
+    const token = getToken();
+    if (!token) return;
+
+    if (!term || term.trim().length === 0) {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/buscar?term=${encodeURIComponent(term)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error buscando usuarios');
+
+      const data = await res.json();
+      // data items: { id, nombre, tag, estado } según confirmaste
+      setSearchResults(data.map(u => ({
+        id: u.id,
+        name: u.nombre || u.name || u.nombreCompleto || '',
+        tag: u.tag || u.nombreUsuario || '',
+        status: u.estado || u.status || 'NINGUNO' // NINGUNO | AMIGO | SOLICITUD_PENDIENTE
+      })));
+    } catch (e) {
+      console.error("buscarUsuarios:", e);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Enviar solicitud
+  const enviarSolicitud = async (destinatarioId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/solicitar/${destinatarioId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return false;
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => null);
+        console.error("Error enviar solicitud:", res.status, txt);
+        return false;
+      }
+
+      // Si se envió correctamente, actualizamos la búsqueda y pendientes
+      // Volvemos a ejecutar búsqueda para actualizar estado del usuario (si estaba en resultados)
+      setSearchResults(prev => prev.map(s => s.id === destinatarioId ? { ...s, status: 'SOLICITUD_PENDIENTE' } : s));
+      await cargarPendientes();
+      return true;
+    } catch (e) {
+      console.error("enviarSolicitud:", e);
+      return false;
+    }
+  };
+
+  // Aceptar solicitud (usa id = solicitudId)
+  const aceptarSolicitud = async (solicitudId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/aceptar/${solicitudId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return false;
+
+      if (!res.ok) {
+        console.error("Error aceptar solicitud:", res.status);
+        return false;
+      }
+
+      await cargarPendientes();
+      await cargarAmigos();
+      return true;
+    } catch (e) {
+      console.error("aceptarSolicitud:", e);
+      return false;
+    }
+  };
+
+  // Rechazar solicitud
+  const rechazarSolicitud = async (solicitudId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/rechazar/${solicitudId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return false;
+
+      if (!res.ok) {
+        console.error("Error rechazar solicitud:", res.status);
+        return false;
+      }
+
+      await cargarPendientes();
+      return true;
+    } catch (e) {
+      console.error("rechazarSolicitud:", e);
+      return false;
+    }
+  };
+
+  // ---------------------------
+  // EFFECT: cargar amigos y pendientes cuando entramos a la pestaña "amigos"
+  // ---------------------------
+  useEffect(() => {
+    if (activeTab === 'amigos') {
+      cargarAmigos();
+      cargarPendientes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // ---------------------------
+  // DEBOUNCE searchTerm
+  // ---------------------------
+  useEffect(() => {
+    // Limpia timeout previo
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
+    }
+
+    if (!searchTerm || searchTerm.trim() === '') {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
+
+    // Espera 400ms tras última tecla
+    searchTimeout.current = setTimeout(() => {
+      buscarUsuarios(searchTerm);
+    }, 400);
+
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // ---------------------------
+  // Función para abrir el chat desde grupo o desde amigo (usa prop onOpenChat)
+  // ---------------------------
+  const handleOpenChatLocal = (groupNameOrUser) => {
+    if (onOpenChat) onOpenChat(groupNameOrUser);
+    setActiveChat(groupNameOrUser);
+  };
+
+  // ---------------------------
+  // Datos mock (historial)
+  // ---------------------------
   const historyGroups = [
     {
       id: 101,
@@ -92,30 +327,9 @@ const Perfil = ({ onOpenChat }) => {
     }
   ];
 
-  const friendsList = [
-    { id: 1, tag: "Chifita lover", role: "Ingeniería Civil", name: "Patricia Gómez" },
-    { id: 2, tag: "Broster Brother", role: "Ingeniería de Sistemas", name: "José Rodriguez" },
-    { id: 3, tag: "Makis Aficionado", role: "Ingeniería de Software", name: "Carlos Mendoza" },
-    { id: 4, tag: "Pasta Mamma mia", role: "Diseño", name: "Ana Torres" },
-    { id: 5, tag: "K-fanático", role: "Arquitectura", name: "Luis Fernandez" },
-    { id: 6, tag: "Chifita lover", role: "Ingeniería Empresarial", name: "María García" },
-    { id: 7, tag: "Broster Brother", role: "Ingeniería de Sistemas", name: "Juan Patiño" },
-    { id: 8, tag: "Makis Aficionado", role: "Arquitectura", name: "Ana Moreira" },
-  ];
-
-  // Función para cerrar sesión
-  const handleLogout = () => {
-    logoutUser();
-    navigate('/login');
-  };
-
-  // Función para abrir el chat
-  const handleOpenChat = (group) => {
-    if (onOpenChat) {
-      onOpenChat({ id: group.id, name: group.name });
-    }
-  };
-
+  // ---------------------------
+  // RENDER
+  // ---------------------------
   return (
     <div className="min-h-screen bg-primary flex flex-col font-secondary">
       <Navbar />
@@ -216,7 +430,7 @@ const Perfil = ({ onOpenChat }) => {
             {/* --- PESTAÑA: GRUPOS (CONECTADO A API) --- */}
             {activeTab === 'grupos' && (
               <div className="flex flex-col gap-8 animate-fade-in">
-                {loading ? (
+                {loadingGroups ? (
                   <p className="text-white text-center text-xl">Cargando tus grupos...</p>
                 ) : userGroups.length > 0 ? (
                   userGroups.map((group) => (
@@ -234,7 +448,7 @@ const Perfil = ({ onOpenChat }) => {
                               <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
                             </svg>
                           </div>
-                          
+
                           {/* BOTÓN "VER CHAT GRUPAL" */}
                           <button 
                           onClick={() => handleOpenChat(group)} // <--- USAMOS LA PROP AQUÍ
@@ -331,36 +545,132 @@ const Perfil = ({ onOpenChat }) => {
             {/* --- PESTAÑA: AMIGOS --- */}
             {activeTab === 'amigos' && (
               <div className="flex flex-col gap-8 animate-fade-in">
-                {/* ... (Tu código de amigos igual que antes) ... */}
+
+                {/* BUSCADOR */}
                 <div className="relative w-full">
-                  <input type="text" placeholder="Buscar amigos..." className="w-full bg-[#EAE0E0] rounded-xl px-6 py-4 text-secondary focus:outline-none placeholder-primary/80 font-medium" />
+                  <input
+                    type="text"
+                    placeholder="Buscar amigos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-[#EAE0E0] rounded-xl px-6 py-4 text-secondary focus:outline-none placeholder-primary/80 font-medium"
+                  />
                   <div className="absolute right-6 top-1/2 transform -translate-y-1/2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white bg-secondary rounded-full p-1 box-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {friendsList.map((friend) => (
-                    <div key={friend.id} className="bg-[#FFEDED] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg aspect-3/4">
-                      <span className="text-sm font-bold text-secondary mb-2">{friend.tag}</span>
-                      <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
-                          <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                        </svg>
+
+                {/* RESULTADOS DE BÚSQUEDA */}
+                {searching && <p className="text-white">Buscando...</p>}
+                {searchResults.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {searchResults.map((u) => (
+                      <div key={u.id} className="bg-white rounded-2xl p-4 shadow flex flex-col items-center">
+                        <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-10 h-10">
+                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <p className="font-bold text-primary text-center">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.tag}</p>
+
+                        <div className="mt-3 w-full flex justify-center">
+                          {u.status === 'NINGUNO' && (
+                            <button
+                              onClick={async () => {
+                                const ok = await enviarSolicitud(u.id);
+                                if (ok) {
+                                  // opcional: mostrar feedback
+                                } else {
+                                  alert('No se pudo enviar la solicitud');
+                                }
+                              }}
+                              className="bg-primary text-white px-4 py-2 rounded-xl"
+                            >
+                              Enviar solicitud
+                            </button>
+                          )}
+                          {u.status === 'SOLICITUD_PENDIENTE' && (
+                            <div className="px-3 py-2 rounded-xl bg-yellow-400 text-black font-semibold">Solicitud enviada</div>
+                          )}
+                          {u.status === 'AMIGO' && (
+                            <div className="px-3 py-2 rounded-xl bg-green-600 text-white font-semibold">Amigo</div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-center mb-3">
-                        <p className="text-[10px] md:text-xs text-black/70 font-semibold">{friend.role}</p>
-                        <p className="text-md md:text-base font-bold text-primary leading-tight mt-1">{friend.name}</p>
+                    ))}
+                  </div>
+                )}
+
+                {/* SOLICITUDES PENDIENTES */}
+                <div>
+                  <h3 className="text-white text-xl font-bold mb-4">Solicitudes pendientes</h3>
+                  {pendingRequests.length === 0 && <p className="text-white/80">No tienes solicitudes pendientes.</p>}
+                  <div className="flex flex-col gap-3">
+                    {pendingRequests.map((p) => (
+                      <div key={p.id} className="bg-white rounded-xl p-4 flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-primary">{p.name}</p>
+                          <p className="text-xs text-gray-500">{p.tag}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              const ok = await aceptarSolicitud(p.id);
+                              if (!ok) alert('No se pudo aceptar la solicitud');
+                            }}
+                            className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                          >
+                            Aceptar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const ok = await rechazarSolicitud(p.id);
+                              if (!ok) alert('No se pudo rechazar la solicitud');
+                            }}
+                            className="bg-red-600 text-white px-4 py-2 rounded-xl"
+                          >
+                            Rechazar
+                          </button>
+                        </div>
                       </div>
-                      <button className="hover:scale-110 transition-transform">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-primary">
-                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+
+                {/* MIS AMIGOS */}
+                <div>
+                  <h3 className="text-white text-xl font-bold mb-4">Mis amigos</h3>
+                  {loadingFriends ? <p className="text-white">Cargando amigos...</p> : null}
+                  {friendsList.length === 0 && !loadingFriends && <p className="text-white/80">Aún no tienes amigos.</p>}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {friendsList.map((friend) => (
+                      <div key={friend.id} className="bg-[#FFEDED] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg">
+                        <span className="text-sm font-bold text-secondary mb-2">{friend.tag}</span>
+                        <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
+                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="text-center mb-3">
+                          <p className="text-[10px] md:text-xs text-black/70 font-semibold">{friend.role}</p>
+                          <p className="text-md md:text-base font-bold text-primary leading-tight mt-1">{friend.name}</p>
+                        </div>
+                        <div className="w-full flex justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenChatLocal(friend.name)}
+                            className="bg-primary text-white px-4 py-2 rounded-xl"
+                          >
+                            Chat
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
               </div>
             )}
 

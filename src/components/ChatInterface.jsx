@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getToken } from '../services/authService';
-import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
 // Helper para obtener ID del usuario desde el JWT

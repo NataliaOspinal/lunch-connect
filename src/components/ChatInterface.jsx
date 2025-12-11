@@ -133,7 +133,7 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
 
   // --- VISTA MAXIMIZADA ---
   return (
-    <div className="fixed bottom-0 right-4 w-80 md:w-96 h-[500px] bg-white rounded-t-2xl shadow-2xl border border-secondary flex flex-col z-50 animate-slide-up">
+    <div className="fixed bottom-0 right-4 w-80 md:w-96 h-[500px] bg-white rounded-t-2xl shadow-2xl border border-gray-200 flex flex-col z-50 animate-slide-up">
       
       {/* HEADER */}
       <div className="bg-primary p-4 rounded-t-2xl flex justify-between items-center text-white cursor-pointer" onClick={() => setIsMinimized(true)}>
@@ -185,7 +185,7 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Escribe un mensaje..." 
-          className="flex-1 text-black bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 bg-gray-100 text-black rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
         />
         <button type="submit" className="bg-primary text-white p-2 rounded-full hover:bg-[#4a1313] transition-colors" disabled={!newMessage.trim()}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">

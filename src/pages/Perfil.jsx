@@ -92,16 +92,7 @@ const Perfil = ({ onOpenChat }) => {
     }
   ];
 
-  const friendsList = [
-    { id: 1, tag: "Chifita lover", role: "Ingeniería Civil", name: "Patricia Gómez" },
-    { id: 2, tag: "Broster Brother", role: "Ingeniería de Sistemas", name: "José Rodriguez" },
-    { id: 3, tag: "Makis Aficionado", role: "Ingeniería de Software", name: "Carlos Mendoza" },
-    { id: 4, tag: "Pasta Mamma mia", role: "Diseño", name: "Ana Torres" },
-    { id: 5, tag: "K-fanático", role: "Arquitectura", name: "Luis Fernandez" },
-    { id: 6, tag: "Chifita lover", role: "Ingeniería Empresarial", name: "María García" },
-    { id: 7, tag: "Broster Brother", role: "Ingeniería de Sistemas", name: "Juan Patiño" },
-    { id: 8, tag: "Makis Aficionado", role: "Arquitectura", name: "Ana Moreira" },
-  ];
+  const friendsList = [];
 
   // Función para cerrar sesión
   const handleLogout = () => {

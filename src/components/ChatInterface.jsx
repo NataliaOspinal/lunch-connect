@@ -86,22 +86,28 @@ useEffect(() => {
   // 2. ENVIAR MENSAJE WS
   // -----------------------
   const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
+  e.preventDefault();
+  if (!newMessage.trim()) return;
 
-    const msg = {
-      grupoId: groupId.toString(),
-      content: newMessage,
-      type: "CHAT",
-    };
+  if (!stompClient.current || !stompClient.current.connected) {
+    console.warn("STOMP no está conectado");
+    return;
+  }
 
-    stompClient.current.publish({
-      destination: "/app/chat.sendMessage",
-      body: JSON.stringify(msg),
-    });
-
-    setNewMessage("");
+  const msg = {
+    grupoId: groupId.toString(),
+    content: newMessage,
+    type: "CHAT",
   };
+
+  stompClient.current.publish({
+    destination: "/app/chat.sendMessage",
+    body: JSON.stringify(msg),
+  });
+
+  setNewMessage("");
+};
+
 
   // -----------------------
   // 3. UI DEL CHAT

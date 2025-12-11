@@ -1,322 +1,687 @@
-// ===== PARTE 1: ESTADOS Y FUNCIONES PARA AGREGAR =====
+import React, { useState, useEffect, useRef } from 'react';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import InputField from '../components/ui/InputField';
+import { useNavigate } from 'react-router-dom';
+import { logoutUser, getToken } from '../services/authService'; // Importamos getToken
 
-// Estados para amigos (agregar después de los estados de grupos)
-const [friendsList, setFriendsList] = useState([]);
-const [pendingRequests, setPendingRequests] = useState([]);
-const [searchTerm, setSearchTerm] = useState('');
-const [searchResults, setSearchResults] = useState([]);
-const [loadingFriends, setLoadingFriends] = useState(false);
-const [loadingSearch, setLoadingSearch] = useState(false);
+const Perfil = ({ onOpenChat }) => {
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('datos');
 
-// ===== USEEFFECT PARA CARGAR AMIGOS =====
-useEffect(() => {
-  if (activeTab === 'amigos') {
-    fetchFriends();
-    fetchPendingRequests();
-  }
-}, [activeTab]);
+  // Estados generales
+  const [activeChat, setActiveChat] = useState(null);
+  const [userGroups, setUserGroups] = useState([]);
+  const [loadingGroups, setLoadingGroups] = useState(false);
 
-// ===== FUNCIONES DE API =====
+  // --- AMIGOS: estados ---
+  const [friendsList, setFriendsList] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]); // cada item tiene { id: solicitudId, name, tag, ... }
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]); // cada item: { id, nombre, tag, estado }
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [searching, setSearching] = useState(false);
 
-// Cargar lista de amigos
-const fetchFriends = async () => {
-  const token = getToken();
-  if (!token) return;
+  // Debounce ref
+  const searchTimeout = useRef(null);
 
-  setLoadingFriends(true);
-  try {
-    const response = await fetch('https://lunchconnect-backend.onrender.com/api/amigos', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+  // ---------------------------
+  // UTIL: logout y manejo 401
+  // ---------------------------
+  const handleLogout = () => {
+    logoutUser();
+    navigate('/login');
+  };
 
-    if (response.status === 401 || response.status === 403) {
+  const handleAuthError = (status) => {
+    if (status === 401 || status === 403) {
       handleLogout();
+      return true;
+    }
+    return false;
+  };
+
+  // ---------------------------
+  // GRUPOS: carga inicial (igual a tu código)
+  // ---------------------------
+  useEffect(() => {
+    const fetchUserGroups = async () => {
+      const token = getToken();
+      if (!token) return;
+
+      setLoadingGroups(true);
+      try {
+        const response = await fetch('https://lunchconnect-backend.onrender.com/api/grupos/mis-grupos', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (handleAuthError(response.status)) return;
+
+        if (!response.ok) {
+          throw new Error('Error al cargar mis grupos');
+        }
+
+        const data = await response.json();
+
+        const mappedGroups = data.map(grupo => ({
+          id: grupo.id,
+          name: grupo.nombreGrupo,
+          date: new Date(grupo.fechaHoraAlmuerzo).toLocaleDateString(),
+          time: new Date(grupo.fechaHoraAlmuerzo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          creator: grupo.creadorNombre || "Tú",
+          currentMembers: grupo.participantesCount || 1,
+          maxMembers: grupo.maxMiembros,
+          members: grupo.participantes ? grupo.participantes : [{ name: "Tú" }]
+        }));
+
+        setUserGroups(mappedGroups);
+      } catch (error) {
+        console.error("Error fetching user groups:", error);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+
+    fetchUserGroups();
+  }, []);
+
+  // ---------------------------
+  // AMIGOS: funciones para llamar al backend
+  // ---------------------------
+
+  // Cargar lista de amigos
+  const cargarAmigos = async () => {
+    const token = getToken();
+    if (!token) return;
+    setLoadingFriends(true);
+    try {
+      const res = await fetch('https://lunchconnect-backend.onrender.com/api/amigos', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error al obtener amigos');
+
+      const data = await res.json();
+      // Suponemos que cada item tiene { id, nombre, tag, role? }
+      setFriendsList(data.map(u => ({
+        id: u.id,
+        name: u.nombre || u.name || u.nombreCompleto || u.nombreUsuario || u.nombreUsuarioPublico || u.nombre,
+        tag: u.tag || u.nombreUsuario || u.nombreUsuarioPublico || '',
+        role: u.role || u.titulo || u.tituloPrincipal || ''
+      })));
+    } catch (e) {
+      console.error("cargarAmigos:", e);
+    } finally {
+      setLoadingFriends(false);
+    }
+  };
+
+  // Cargar solicitudes pendientes
+  const cargarPendientes = async () => {
+    const token = getToken();
+    if (!token) return;
+    try {
+      const res = await fetch('https://lunchconnect-backend.onrender.com/api/amigos/pendientes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error al obtener pendientes');
+
+      const data = await res.json();
+      // Según tu servicio, cada elemento podría venir con id = solicitudId y name/tag del remitente
+      setPendingRequests(data.map(p => ({
+        id: p.id, // solicitudId según tu mapping del backend
+        userId: p.usuarioId || p.usuario_id || p.userId || null,
+        name: p.nombre || p.name || p.nombreCompleto || '',
+        tag: p.tag || p.nombreUsuario || ''
+      })));
+    } catch (e) {
+      console.error("cargarPendientes:", e);
+    }
+  };
+
+  // Buscar usuarios (debounced)
+  const buscarUsuarios = async (term) => {
+    const token = getToken();
+    if (!token) return;
+
+    if (!term || term.trim().length === 0) {
+      setSearchResults([]);
+      setSearching(false);
       return;
     }
 
-    if (response.ok) {
-      const data = await response.json();
-      setFriendsList(data);
+    setSearching(true);
+
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/buscar?term=${encodeURIComponent(term)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (handleAuthError(res.status)) return;
+
+      if (!res.ok) throw new Error('Error buscando usuarios');
+
+      const data = await res.json();
+      // data items: { id, nombre, tag, estado } según confirmaste
+      setSearchResults(data.map(u => ({
+        id: u.id,
+        name: u.nombre || u.name || u.nombreCompleto || '',
+        tag: u.tag || u.nombreUsuario || '',
+        status: u.estado || u.status || 'NINGUNO' // NINGUNO | AMIGO | SOLICITUD_PENDIENTE
+      })));
+    } catch (e) {
+      console.error("buscarUsuarios:", e);
+    } finally {
+      setSearching(false);
     }
-  } catch (error) {
-    console.error("Error fetching friends:", error);
-  } finally {
-    setLoadingFriends(false);
-  }
-};
+  };
 
-// Cargar solicitudes pendientes
-const fetchPendingRequests = async () => {
-  const token = getToken();
-  if (!token) return;
+  // Enviar solicitud
+  const enviarSolicitud = async (destinatarioId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/solicitar/${destinatarioId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-  try {
-    const response = await fetch('https://lunchconnect-backend.onrender.com/api/amigos/pendientes', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+      if (handleAuthError(res.status)) return false;
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => null);
+        console.error("Error enviar solicitud:", res.status, txt);
+        return false;
       }
-    });
 
-    if (response.ok) {
-      const data = await response.json();
-      setPendingRequests(data);
+      // Si se envió correctamente, actualizamos la búsqueda y pendientes
+      // Volvemos a ejecutar búsqueda para actualizar estado del usuario (si estaba en resultados)
+      setSearchResults(prev => prev.map(s => s.id === destinatarioId ? { ...s, status: 'SOLICITUD_PENDIENTE' } : s));
+      await cargarPendientes();
+      return true;
+    } catch (e) {
+      console.error("enviarSolicitud:", e);
+      return false;
     }
-  } catch (error) {
-    console.error("Error fetching pending requests:", error);
-  }
-};
+  };
 
-// Buscar usuarios
-const handleSearchUsers = async () => {
-  if (!searchTerm.trim()) {
-    setSearchResults([]);
-    return;
-  }
+  // Aceptar solicitud (usa id = solicitudId)
+  const aceptarSolicitud = async (solicitudId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/aceptar/${solicitudId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-  const token = getToken();
-  if (!token) return;
+      if (handleAuthError(res.status)) return false;
 
-  setLoadingSearch(true);
-  try {
-    const response = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/buscar?term=${encodeURIComponent(searchTerm)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+      if (!res.ok) {
+        console.error("Error aceptar solicitud:", res.status);
+        return false;
       }
-    });
 
-    if (response.ok) {
-      const data = await response.json();
-      setSearchResults(data);
+      await cargarPendientes();
+      await cargarAmigos();
+      return true;
+    } catch (e) {
+      console.error("aceptarSolicitud:", e);
+      return false;
     }
-  } catch (error) {
-    console.error("Error searching users:", error);
-  } finally {
-    setLoadingSearch(false);
-  }
-};
+  };
 
-// Enviar solicitud de amistad
-const handleSendFriendRequest = async (destinatarioId) => {
-  const token = getToken();
-  if (!token) return;
+  // Rechazar solicitud
+  const rechazarSolicitud = async (solicitudId) => {
+    const token = getToken();
+    if (!token) return false;
+    try {
+      const res = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/rechazar/${solicitudId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-  try {
-    const response = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/solicitar/${destinatarioId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+      if (handleAuthError(res.status)) return false;
+
+      if (!res.ok) {
+        console.error("Error rechazar solicitud:", res.status);
+        return false;
       }
-    });
 
-    if (response.ok) {
-      alert('✅ Solicitud de amistad enviada');
-      handleSearchUsers();
-    } else {
-      const message = await response.text();
-      alert(message || 'Error al enviar solicitud');
+      await cargarPendientes();
+      return true;
+    } catch (e) {
+      console.error("rechazarSolicitud:", e);
+      return false;
     }
-  } catch (error) {
-    console.error("Error sending friend request:", error);
-    alert('Error al enviar solicitud');
-  }
-};
+  };
 
-// Aceptar solicitud
-const handleAcceptRequest = async (solicitudId) => {
-  const token = getToken();
-  if (!token) return;
-
-  try {
-    const response = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/aceptar/${solicitudId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      alert('✅ Solicitud aceptada. ¡Ahora son amigos!');
-      fetchFriends();
-      fetchPendingRequests();
+  // ---------------------------
+  // EFFECT: cargar amigos y pendientes cuando entramos a la pestaña "amigos"
+  // ---------------------------
+  useEffect(() => {
+    if (activeTab === 'amigos') {
+      cargarAmigos();
+      cargarPendientes();
     }
-  } catch (error) {
-    console.error("Error accepting request:", error);
-    alert('Error al aceptar solicitud');
-  }
-};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
-// Rechazar solicitud
-const handleRejectRequest = async (solicitudId) => {
-  const token = getToken();
-  if (!token) return;
-
-  try {
-    const response = await fetch(`https://lunchconnect-backend.onrender.com/api/amigos/rechazar/${solicitudId}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      alert('Solicitud rechazada');
-      fetchPendingRequests();
+  // ---------------------------
+  // DEBOUNCE searchTerm
+  // ---------------------------
+  useEffect(() => {
+    // Limpia timeout previo
+    if (searchTimeout.current) {
+      clearTimeout(searchTimeout.current);
     }
-  } catch (error) {
-    console.error("Error rejecting request:", error);
-    alert('Error al rechazar solicitud');
-  }
-};
 
-{/* --- PESTAÑA: AMIGOS --- */}
-{activeTab === 'amigos' && (
-  <div className="flex flex-col gap-8 animate-fade-in">
-    
-    {/* BARRA DE BÚSQUEDA */}
-    <div className="relative w-full">
-      <input 
-        type="text" 
-        placeholder="Buscar usuarios..." 
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && handleSearchUsers()}
-        className="w-full bg-[#EAE0E0] rounded-xl px-6 py-4 text-secondary focus:outline-none placeholder-primary/80 font-medium" 
-      />
-      <button 
-        onClick={handleSearchUsers}
-        className="absolute right-6 top-1/2 transform -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white bg-secondary rounded-full p-1 box-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </button>
-    </div>
+    if (!searchTerm || searchTerm.trim() === '') {
+      setSearchResults([]);
+      setSearching(false);
+      return;
+    }
 
-    {/* RESULTADOS DE BÚSQUEDA */}
-    {loadingSearch && (
-      <p className="text-white text-center">Buscando...</p>
-    )}
-    
-    {searchResults.length > 0 && (
-      <div>
-        <h3 className="text-white text-xl font-semibold mb-4">Resultados de búsqueda</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {searchResults.map((user) => (
-            <div key={user.id} className="bg-[#FFEDED] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg">
-              <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
-                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="text-center mb-3">
-                <p className="text-md md:text-base font-bold text-primary leading-tight">{user.nombre}</p>
-                <p className="text-[10px] md:text-xs text-black/70 font-semibold mt-1">{user.email}</p>
-              </div>
-              <button 
-                onClick={() => handleSendFriendRequest(user.id)}
-                className="bg-secondary hover:bg-red-900 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Enviar solicitud
-              </button>
-            </div>
-          ))}
+    // Espera 400ms tras última tecla
+    searchTimeout.current = setTimeout(() => {
+      buscarUsuarios(searchTerm);
+    }, 400);
+
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
+
+  // ---------------------------
+  // Función para abrir el chat desde grupo o desde amigo (usa prop onOpenChat)
+  // ---------------------------
+  const handleOpenChatLocal = (groupNameOrUser) => {
+    if (onOpenChat) onOpenChat(groupNameOrUser);
+    setActiveChat(groupNameOrUser);
+  };
+
+  // ---------------------------
+  // Datos mock (historial)
+  // ---------------------------
+  const historyGroups = [
+    {
+      id: 101,
+      name: "Grupo comelones",
+      date: "12/12/2025",
+      time: "22:30",
+      creator: "Maria L.",
+      image: null,
+      currentMembers: 9,
+      maxMembers: 10,
+      members: [{ name: "Amelia A." }, { name: "Francisco C." }, { name: "Rodolfo B." }, { name: "Rodolfo B." }]
+    }
+  ];
+
+  // ---------------------------
+  // RENDER
+  // ---------------------------
+  return (
+    <div className="min-h-screen bg-primary flex flex-col font-secondary">
+      <Navbar />
+
+      <main className="grow flex flex-col items-center justify-start px-4 py-8 bg-white">
+
+        {/* TÍTULO Y BOTÓN DE CERRAR SESIÓN */}
+        <div className="w-full max-w-5xl flex justify-between items-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary font-secondary">
+            Perfil
+          </h1>
+          <button
+            onClick={handleLogout}
+            className="bg-secondary hover:bg-red-800 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors"
+          >
+            Cerrar sesión
+          </button>
         </div>
-      </div>
-    )}
 
-    {/* SOLICITUDES PENDIENTES */}
-    {pendingRequests.length > 0 && (
-      <div>
-        <h3 className="text-white text-xl font-semibold mb-4">
-          Solicitudes pendientes ({pendingRequests.length})
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {pendingRequests.map((request) => (
-            <div key={request.id} className="bg-[#FFF5E1] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg border-2 border-yellow-400">
-              <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
-                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="text-center mb-3">
-                <p className="text-md md:text-base font-bold text-primary leading-tight">{request.nombre}</p>
-                <p className="text-[10px] md:text-xs text-black/70 font-semibold mt-1">{request.email}</p>
-              </div>
-              <div className="flex gap-2 w-full">
-                <button 
-                  onClick={() => handleAcceptRequest(request.id)}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors cursor-pointer"
-                >
-                  Aceptar
-                </button>
-                <button 
-                  onClick={() => handleRejectRequest(request.id)}
-                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors cursor-pointer"
-                >
-                  Rechazar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
+        <div className="w-full max-w-5xl">
 
-    {/* LISTA DE AMIGOS */}
-    <div>
-      <h3 className="text-white text-xl font-semibold mb-4">
-        Mis amigos {friendsList.length > 0 && `(${friendsList.length})`}
-      </h3>
-      
-      {loadingFriends ? (
-        <p className="text-white text-center">Cargando amigos...</p>
-      ) : friendsList.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-          {friendsList.map((friend) => (
-            <div key={friend.id} className="bg-[#FFEDED] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg aspect-3/4">
-              <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
-                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                </svg>
+          {/* --- PESTAÑAS (TABS) --- */}
+          <div className="flex w-full pl-4 md:pl-0 overflow-x-auto">
+            {['Datos', 'Grupos', 'Historial', 'Amigos'].map((tab) => {
+              const tabKey = tab.toLowerCase();
+              const isActive = activeTab === tabKey;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tabKey)}
+                  className={`px-10 cursor-pointer py-3 rounded-t-2xl font-semibold text-lg transition-colors whitespace-nowrap ${isActive
+                      ? "bg-primary text-white"
+                      : "bg-[#F3E5E5] text-black hover:bg-[#e0d0d0]"
+                    }`}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* --- CONTENEDOR PRINCIPAL --- */}
+          <div className="bg-primary rounded-b-[2.5rem] rounded-tr-[2.5rem] p-8 md:p-16 shadow-2xl">
+
+            {/* --- PESTAÑA: DATOS --- */}
+            {activeTab === 'datos' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+                {/* COLUMNA IZQUIERDA: Avatar y Títulos */}
+                <div className="col-span-1 flex flex-col items-center gap-6">
+                  <div className="relative">
+                    <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center border-4 border-secondary overflow-hidden">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-32 h-32">
+                        <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <button className="absolute bottom-2 right-2 bg-secondary border-2 border-white p-2 rounded-full text-white hover:bg-red-900 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="w-full">
+                    <label className="text-white font-bold text-lg mb-2 block text-center">
+                      Títulos desbloqueados
+                    </label>
+                    <div className="relative">
+                      <select className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 appearance-none focus:outline-none cursor-pointer font-medium">
+                        <option>-------</option>
+                        <option>Chifa Lover</option>
+                        <option>Rey del Buffet</option>
+                        <option>Networking Master</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* COLUMNA DERECHA: Inputs */}
+                <div className="col-span-1 md:col-span-2 flex flex-col gap-6">
+                  <InputField label="Usuario" id="usuario" />
+                  <InputField label="Actualizar contraseña" type="password" id="new-password" />
+                  <InputField label="LinkedIn" id="linkedin-profile" />
+                </div>
+
+                <div className="col-span-1 md:col-span-3 flex justify-center mt-8 font-secondary">
+                  <button className="bg-secondary hover:bg-red cursor-pointer text-white font-semibold py-3 px-12 rounded-xl transition-colors shadow-lg text-lg">
+                    Guardar cambios
+                  </button>
+                </div>
               </div>
-              <div className="text-center mb-3 flex-grow">
-                <p className="text-md md:text-base font-bold text-primary leading-tight mt-1">{friend.nombre}</p>
-                {friend.email && (
-                  <p className="text-[10px] md:text-xs text-black/70 font-semibold">{friend.email}</p>
+            )}
+
+            {/* --- PESTAÑA: GRUPOS (CONECTADO A API) --- */}
+            {activeTab === 'grupos' && (
+              <div className="flex flex-col gap-8 animate-fade-in">
+                {loadingGroups ? (
+                  <p className="text-white text-center text-xl">Cargando tus grupos...</p>
+                ) : userGroups.length > 0 ? (
+                  userGroups.map((group) => (
+                    <div key={group.id}>
+                      {/* Nombre del Grupo */}
+                      <h3 className="text-white text-xl font-medium mb-3 ml-2">{group.name}</h3>
+
+                      {/* Tarjeta Blanca */}
+                      <div className="bg-white rounded-4xl p-6 flex flex-col lg:flex-row gap-6 items-stretch shadow-lg">
+
+                        {/* 1. Icono/Imagen */}
+                        <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
+                          <div className="w-32 h-32 bg-secondary rounded-2xl flex items-center justify-center border-4 border-secondary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16">
+                              <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+
+                          {/* BOTÓN "VER CHAT GRUPAL" */}
+                          <button
+                            onClick={() => handleOpenChatLocal(group.name)} // <--- USAMOS LA PROP AQUÍ
+                            className="cursor-pointer mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-[#7b3c3c] hover:scale-105 transition-all"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                              <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 01-.814 1.686.75.75 0 00.44 1.223zM8.25 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM10.875 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zm4.875-1.125a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z" clipRule="evenodd" />
+                            </svg>
+                            Chat grupal
+                          </button>
+                        </div>
+
+                        {/* 2. Información Central */}
+                        <div className="grow flex flex-col justify-center gap-3 text-secondary font-bold px-2">
+                          <p className="text-lg">Fecha: <span className="font-medium text-black">{group.date}</span></p>
+                          <p className="text-lg">Hora: <span className="font-medium text-black">{group.time}</span></p>
+                          <p className="text-lg">Creador: <span className="font-medium text-black">{group.creator}</span></p>
+                        </div>
+
+                        {/* 3. Caja de Integrantes */}
+                        <div className="w-full lg:w-[40%] bg-secondary rounded-2xl p-5 text-white flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-4 text-sm">
+                            <span className="font-medium">Integrantes: {group.currentMembers}/{group.maxMembers}</span>
+                            <button className="text-gray-300 hover:text-white underline text-xs">Ver Todos</button>
+                          </div>
+
+                          <div className="flex justify-between items-start">
+                            {/* Renderizamos hasta 4 miembros visuales */}
+                            {group.members.slice(0, 4).map((member, idx) => (
+                              <div key={idx} className="flex flex-col items-center gap-1">
+                                <div className="bg-white rounded-full p-1 w-10 h-10 flex items-center justify-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-6 h-6">
+                                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <span className="text-[10px] text-gray-300 text-center leading-tight max-w-[50px]">{member.name || "Usuario"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-white text-center text-lg mt-10">Aún no tienes grupos activos. ¡Ve a "Explorar" para unirte o crear uno!</p>
                 )}
               </div>
-              {friend.linkedinUrl && (
-                <a 
-                  href={friend.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:scale-110 transition-transform cursor-pointer"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-primary">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-                  </svg>
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-white text-center text-lg">
-          Aún no tienes amigos. ¡Busca usuarios y envía solicitudes!
-        </p>
-      )}
-    </div>
+            )}
 
-  </div>
-)}
+            {/* --- PESTAÑA: HISTORIAL --- */}
+            {activeTab === 'historial' && (
+              <div className="flex flex-col gap-8 animate-fade-in">
+                {historyGroups.map((group) => (
+                  <div key={group.id}>
+                    <h3 className="text-white text-xl font-medium mb-3 ml-2">{group.name}</h3>
+                    <div className="border-[3px] border-[#F6E7E7] bg-[#7E3333] rounded-4xl p-6 flex flex-col lg:flex-row gap-6 items-stretch">
+                      <div className="w-full lg:w-auto shrink-0 flex justify-center">
+                        <div className="w-32 h-32 bg-secondary rounded-2xl flex items-center justify-center border-4 border-secondary/50">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16 opacity-50">
+                            <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="grow flex flex-col justify-center gap-3 text-white font-bold px-2">
+                        <p className="text-lg text-white"> <span className="text-gray-300 font-normal">Fecha:</span> {group.date} </p>
+                        <p className="text-lg"> <span className="text-gray-300 font-normal">Hora:</span> {group.time} </p>
+                        <p className="text-lg"> <span className="text-gray-300 font-normal">Creador:</span> {group.creator} </p>
+                      </div>
+                      <div className="w-full lg:w-[40%] bg-secondary rounded-2xl p-5 text-white flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-4 text-sm">
+                          <span className="font-medium">Integrantes: {group.currentMembers}/{group.maxMembers}</span>
+                          <button className="text-gray-300 hover:text-white underline text-xs">Ver Todos</button>
+                        </div>
+                        <div className="flex justify-between items-start">
+                          {group.members.map((member, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1">
+                              <div className="bg-white rounded-full p-1 w-10 h-10 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-6 h-6">
+                                  <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              <span className="text-[10px] text-gray-300 text-center leading-tight max-w-[50px]">{member.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* --- PESTAÑA: AMIGOS --- */}
+            {activeTab === 'amigos' && (
+              <div className="flex flex-col gap-8 animate-fade-in">
+
+                {/* BUSCADOR */}
+                <div className="relative w-full">
+                  <input
+                    type="text"
+                    placeholder="Buscar amigos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-[#EAE0E0] rounded-xl px-6 py-4 text-secondary focus:outline-none placeholder-primary/80 font-medium"
+                  />
+                  <div className="absolute right-6 top-1/2 transform -translate-y-1/2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white bg-secondary rounded-full p-1 box-content" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* RESULTADOS DE BÚSQUEDA */}
+                {searching && <p className="text-white">Buscando...</p>}
+                {searchResults.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {searchResults.map((u) => (
+                      <div key={u.id} className="bg-white rounded-2xl p-4 shadow flex flex-col items-center">
+                        <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-10 h-10">
+                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <p className="font-bold text-primary text-center">{u.name}</p>
+                        <p className="text-xs text-gray-500">{u.tag}</p>
+
+                        <div className="mt-3 w-full flex justify-center">
+                          {u.status === 'NINGUNO' && (
+                            <button
+                              onClick={async () => {
+                                const ok = await enviarSolicitud(u.id);
+                                if (ok) {
+                                  // opcional: mostrar feedback
+                                } else {
+                                  alert('No se pudo enviar la solicitud');
+                                }
+                              }}
+                              className="bg-primary text-white px-4 py-2 rounded-xl"
+                            >
+                              Enviar solicitud
+                            </button>
+                          )}
+                          {u.status === 'SOLICITUD_PENDIENTE' && (
+                            <div className="px-3 py-2 rounded-xl bg-yellow-400 text-black font-semibold">Solicitud enviada</div>
+                          )}
+                          {u.status === 'AMIGO' && (
+                            <div className="px-3 py-2 rounded-xl bg-green-600 text-white font-semibold">Amigo</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* SOLICITUDES PENDIENTES */}
+                <div>
+                  <h3 className="text-white text-xl font-bold mb-4">Solicitudes pendientes</h3>
+                  {pendingRequests.length === 0 && <p className="text-white/80">No tienes solicitudes pendientes.</p>}
+                  <div className="flex flex-col gap-3">
+                    {pendingRequests.map((p) => (
+                      <div key={p.id} className="bg-white rounded-xl p-4 flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-primary">{p.name}</p>
+                          <p className="text-xs text-gray-500">{p.tag}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={async () => {
+                              const ok = await aceptarSolicitud(p.id);
+                              if (!ok) alert('No se pudo aceptar la solicitud');
+                            }}
+                            className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                          >
+                            Aceptar
+                          </button>
+                          <button
+                            onClick={async () => {
+                              const ok = await rechazarSolicitud(p.id);
+                              if (!ok) alert('No se pudo rechazar la solicitud');
+                            }}
+                            className="bg-red-600 text-white px-4 py-2 rounded-xl"
+                          >
+                            Rechazar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* MIS AMIGOS */}
+                <div>
+                  <h3 className="text-white text-xl font-bold mb-4">Mis amigos</h3>
+                  {loadingFriends ? <p className="text-white">Cargando amigos...</p> : null}
+                  {friendsList.length === 0 && !loadingFriends && <p className="text-white/80">Aún no tienes amigos.</p>}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {friendsList.map((friend) => (
+                      <div key={friend.id} className="bg-[#FFEDED] rounded-2xl p-4 flex flex-col items-center justify-between shadow-lg">
+                        <span className="text-sm font-bold text-secondary mb-2">{friend.tag}</span>
+                        <div className="w-20 h-20 bg-secondary rounded-full flex items-center justify-center mb-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-12 h-12">
+                            <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="text-center mb-3">
+                          <p className="text-[10px] md:text-xs text-black/70 font-semibold">{friend.role}</p>
+                          <p className="text-md md:text-base font-bold text-primary leading-tight mt-1">{friend.name}</p>
+                        </div>
+                        <div className="w-full flex justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenChatLocal(friend.name)}
+                            className="bg-primary text-white px-4 py-2 rounded-xl"
+                          >
+                            Chat
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+        </div>
+      </main>
+
+      <Footer />
+
+    </div>
+  );
+};
+
+export default Perfil;

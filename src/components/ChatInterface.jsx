@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "../services/authService";
+import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
 const getUserIdFromToken = () => {
@@ -25,6 +26,7 @@ const getUserIdFromToken = () => {
 const ChatInterface = ({ groupId, groupName, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
+
   const messagesEndRef = useRef(null);
   const stompClient = useRef(null);
 
@@ -36,10 +38,15 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
   useEffect(() => {
     const token = getToken();
 
+    const socket = new SockJS("https://lunchconnect-backend.onrender.com/ws");
+
     const client = new Client({
-      brokerURL: `wss://lunchconnect-backend.onrender.com/ws?token=${token}`, // 🔥 FIX IMPORTANTE
+      webSocketFactory: () => socket,
       reconnectDelay: 3000,
       debug: () => {},
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     client.onConnect = () => {
@@ -68,9 +75,9 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
     stompClient.current = client;
 
     return () => client.deactivate();
-  }, [groupId]);
+  }, [groupId, myId]);
 
-  // Scroll al fondo
+  // Scroll automático
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);

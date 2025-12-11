@@ -13,7 +13,13 @@ const Perfil = ({ onOpenChat }) => {
   const [activeChat, setActiveChat] = useState(null);
   const [userGroups, setUserGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  
+  // Modal de Miembros
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [selectedGroupMembers, setSelectedGroupMembers] = useState([]);
+  const [selectedGroupName, setSelectedGroupName] = useState('');
 
+  
   // --- AMIGOS: estados ---
   const [friendsList, setFriendsList] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]); // cada item tiene { id: solicitudId, name, tag, ... }
@@ -51,6 +57,7 @@ const Perfil = ({ onOpenChat }) => {
 
       setLoadingGroups(true);
       try {
+        // 1. Obtener mis grupos
         const response = await fetch('https://lunchconnect-backend.onrender.com/api/grupos/mis-grupos', {
           method: 'GET',
           headers: {
@@ -61,24 +68,53 @@ const Perfil = ({ onOpenChat }) => {
 
         if (handleAuthError(response.status)) return;
 
-        if (!response.ok) {
-          throw new Error('Error al cargar mis grupos');
-        }
+        if (!response.ok) throw new Error('Error al cargar mis grupos');
 
         const data = await response.json();
 
-        const mappedGroups = data.map(grupo => ({
-          id: grupo.id,
-          name: grupo.nombreGrupo,
-          date: new Date(grupo.fechaHoraAlmuerzo).toLocaleDateString(),
-          time: new Date(grupo.fechaHoraAlmuerzo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          creator: grupo.creadorNombre || "Tú",
-          currentMembers: grupo.participantesCount || 1,
-          maxMembers: grupo.maxMiembros,
-          members: grupo.participantes ? grupo.participantes : [{ name: "Tú" }]
+        // 2. Para cada grupo, obtener sus participantes individuales
+        // Usamos Promise.all para esperar a que todas las peticiones terminen
+        const groupsWithMembers = await Promise.all(data.map(async (grupo) => {
+            let members = [];
+            
+            // CORRECCIÓN: Usamos grupo.id (del JSON) no grupo.id_grupo
+            if (grupo.id) {
+                try {
+                    const resMembers = await fetch(`https://lunchconnect-backend.onrender.com/api/grupos/${grupo.id}/participantes`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resMembers.ok) {
+                        const dataMembers = await resMembers.json();
+                        // Mapeamos la data de participantes
+                        members = dataMembers.map(m => ({
+                            id: m.id,
+                            name: m.nombreCompleto || m.nombreUsuario || m.nombre || "Usuario",
+                            role: m.id === grupo.creadorId ? "Admin" : "Miembro"
+                        }));
+                    }
+                } catch (err) {
+                    console.error(`Error cargando miembros del grupo ${grupo.id}`, err);
+                }
+            }
+
+            // Si no se cargaron miembros (o falló), ponemos al usuario actual o vacío
+            if (members.length === 0) {
+                members = [{ name: "Tú", role: "Miembro" }];
+            }
+
+            return {
+                id: grupo.id, 
+                name: grupo.nombreGrupo,
+                date: new Date(grupo.fechaHoraAlmuerzo).toLocaleDateString(),
+                time: new Date(grupo.fechaHoraAlmuerzo).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                creator: grupo.creadorNombre || "Usuario",
+                currentMembers: members.length, // Usamos la longitud real de los miembros obtenidos
+                maxMembers: grupo.maxMiembros,
+                members: members // Guardamos la lista real para el modal
+            };
         }));
 
-        setUserGroups(mappedGroups);
+        setUserGroups(groupsWithMembers);
       } catch (error) {
         console.error("Error fetching user groups:", error);
       } finally {
@@ -305,24 +341,25 @@ const Perfil = ({ onOpenChat }) => {
   const handleOpenChat = (group) => {
     if (onOpenChat) {
       onOpenChat({ id: group.id, name: group.name });
+    }else {
+      setActiveChat({ id: group.id, name: group.name });
     }
+  };
+  
+  const closeLocalChat = () => setActiveChat(null);
+
+  // NUEVA FUNCIÓN: Abrir Modal de Miembros
+  const handleOpenMembersModal = (groupName, members) => {
+    setSelectedGroupName(groupName);
+    setSelectedGroupMembers(members || []);
+    setShowMembersModal(true);
   };
 
   // ---------------------------
   // Datos mock (historial)
   // ---------------------------
   const historyGroups = [
-    {
-      id: 101,
-      name: "Grupo comelones",
-      date: "12/12/2025",
-      time: "22:30",
-      creator: "Maria L.",
-      image: null,
-      currentMembers: 9,
-      maxMembers: 10,
-      members: [{ name: "Amelia A." }, { name: "Francisco C." }, { name: "Rodolfo B." }, { name: "Rodolfo B." }]
-    }
+{ id: 101, name: "Grupo comelones", date: "12/12/2025", time: "22:30", creator: "Maria L.", image: null, currentMembers: 9, maxMembers: 10, members: [{ name: "Amelia A." }, { name: "Rodolfo B." }] }
   ];
 
   // ---------------------------
@@ -425,7 +462,7 @@ const Perfil = ({ onOpenChat }) => {
               </div>
             )}
 
-            {/* --- PESTAÑA: GRUPOS (CONECTADO A API) --- */}
+            {/* TAB GRUPOS (ACTUALIZADO) */}
             {activeTab === 'grupos' && (
               <div className="flex flex-col gap-8 animate-fade-in">
                 {loadingGroups ? (
@@ -433,66 +470,50 @@ const Perfil = ({ onOpenChat }) => {
                 ) : userGroups.length > 0 ? (
                   userGroups.map((group) => (
                     <div key={group.id}>
-                      {/* Nombre del Grupo */}
                       <h3 className="text-white text-xl font-medium mb-3 ml-2">{group.name}</h3>
-
-                      {/* Tarjeta Blanca */}
                       <div className="bg-white rounded-4xl p-6 flex flex-col lg:flex-row gap-6 items-stretch shadow-lg">
-
-                        {/* 1. Icono/Imagen */}
+                        
+                        {/* 1. Icono + Botón Chat */}
                         <div className="w-full lg:w-auto shrink-0 flex flex-col items-center">
-                          <div className="w-32 h-32 bg-secondary rounded-2xl flex items-center justify-center border-4 border-secondary">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16">
-                              <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
-                            </svg>
+                          <div className="w-32 h-32 bg-primary rounded-2xl flex items-center justify-center border-4 border-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-16 h-16"><path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" /></svg>
                           </div>
-
-                          {/* BOTÓN "VER CHAT GRUPAL" */}
-                          <button 
-                          onClick={() => handleOpenChat(group)} // <--- USAMOS LA PROP AQUÍ
-                            className="cursor-pointer mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-[#7b3c3c] hover:scale-105 transition-all"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                              <path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 01-.814 1.686.75.75 0 00.44 1.223zM8.25 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM10.875 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zm4.875-1.125a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z" clipRule="evenodd" />
-                            </svg>
+                          <button onClick={() => handleOpenChat(group)} className="cursor-pointer mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-[#4a1313] hover:scale-105 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M4.804 21.644A6.707 6.707 0 006 21.75a6.721 6.721 0 003.583-1.029c.774.182 1.584.279 2.417.279 5.322 0 9.75-3.97 9.75-9 0-5.03-4.428-9-9.75-9s-9.75 3.97-9.75 9c0 2.409 1.025 4.587 2.674 6.192.232.226.277.428.254.543a3.73 3.73 0 01-.814 1.686.75.75 0 00.44 1.223zM8.25 10.875a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25zM10.875 12a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0zm4.875-1.125a1.125 1.125 0 100 2.25 1.125 1.125 0 000-2.25z" clipRule="evenodd" /></svg>
                             Chat grupal
                           </button>
                         </div>
 
-                        {/* 2. Información Central */}
-                        <div className="grow flex flex-col justify-center gap-3 text-secondary font-bold px-2">
+                        {/* 2. Información */}
+                        <div className="grow flex flex-col justify-center gap-3 text-primary font-bold px-2">
                           <p className="text-lg">Fecha: <span className="font-medium text-black">{group.date}</span></p>
                           <p className="text-lg">Hora: <span className="font-medium text-black">{group.time}</span></p>
                           <p className="text-lg">Creador: <span className="font-medium text-black">{group.creator}</span></p>
                         </div>
 
-                        {/* 3. Caja de Integrantes */}
-                        <div className="w-full lg:w-[40%] bg-secondary rounded-2xl p-5 text-white flex flex-col justify-between">
+                        {/* 3. Integrantes */}
+                        <div className="w-full lg:w-[40%] bg-primary rounded-2xl p-5 text-white flex flex-col justify-between">
                           <div className="flex justify-between items-center mb-4 text-sm">
                             <span className="font-medium">Integrantes: {group.currentMembers}/{group.maxMembers}</span>
-                            <button className="text-gray-300 hover:text-white underline text-xs">Ver Todos</button>
+                            <button onClick={() => handleOpenMembersModal(group.name, group.members)} className="text-gray-300 hover:text-white underline text-xs cursor-pointer">Ver Todos</button>
                           </div>
-
                           <div className="flex justify-between items-start">
-                            {/* Renderizamos hasta 4 miembros visuales */}
+                            {/* Mostramos solo los primeros 4 para no saturar la tarjeta */}
                             {group.members.slice(0, 4).map((member, idx) => (
                               <div key={idx} className="flex flex-col items-center gap-1">
                                 <div className="bg-white rounded-full p-1 w-10 h-10 flex items-center justify-center">
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-6 h-6">
-                                    <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                                  </svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-6 h-6"><path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" /></svg>
                                 </div>
-                                <span className="text-[10px] text-gray-300 text-center leading-tight max-w-[50px]">{member.name || "Usuario"}</span>
+                                <span className="text-[10px] text-gray-300 text-center leading-tight max-w-[50px] truncate">{member.name}</span>
                               </div>
                             ))}
                           </div>
                         </div>
-
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-white text-center text-lg mt-10">Aún no tienes grupos activos. ¡Ve a "Explorar" para unirte o crear uno!</p>
+                  <p className="text-white text-center text-lg mt-10">Aún no tienes grupos activos.</p>
                 )}
               </div>
             )}
@@ -677,6 +698,30 @@ const Perfil = ({ onOpenChat }) => {
       </main>
 
       <Footer />
+
+      {showMembersModal && (
+        <div className="fixed inset-0 bg-black/50 z-100 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowMembersModal(false)}>
+          <div className="bg-primary w-full max-w-lg rounded-3xl p-6 relative shadow-2xl border-2 border-white/20" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowMembersModal(false)} className="absolute top-4 right-4 text-white hover:text-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="cursor-pointer w-8 h-8"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <h3 className="text-2xl font-bold text-white text-center mb-6 border-b border-white/20 pb-4">
+              Integrantes de {selectedGroupName}
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {selectedGroupMembers.map((member, idx) => (
+                <div key={idx} className="bg-white/10 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-white/20 transition-colors">
+                  <div className="bg-white rounded-full p-2 w-12 h-12 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-8 h-8"><path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" /></svg>
+                  </div>
+                  <span className="text-sm font-medium text-white text-center truncate w-full">{member.name}</span>
+                  <span className="text-[10px] text-gray-300 bg-black/20 px-2 py-0.5 rounded-full">{member.role}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

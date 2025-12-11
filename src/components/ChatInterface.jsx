@@ -35,48 +35,48 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
   // -----------------------
   // 1. CONECTAR WEBSOCKET
   // -----------------------
-  useEffect(() => {
-    const token = getToken();
+useEffect(() => {
+  const token = getToken();
 
-    // Crear cliente STOMP/SockJS
-    const socket = new SockJS("https://lunchconnect-backend.onrender.com/ws");
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 3000,
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      debug: () => {} // silenciar logs
+  const client = new Client({
+    brokerURL: "wss://lunchconnect-backend.onrender.com/ws",
+    reconnectDelay: 3000,
+    connectHeaders: {
+      Authorization: `Bearer ${token}`,
+    },
+    debug: () => {},
+  });
+
+  client.onConnect = () => {
+    console.log("WebSocket conectado");
+
+    client.subscribe(`/topic/grupos/${groupId}`, (message) => {
+      const msg = JSON.parse(message.body);
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: msg.id || Date.now(),
+          text: msg.content,
+          sender: msg.senderId === myId ? "Tú" : "Usuario",
+          isMe: msg.senderId === myId,
+          time: new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+          })
+        }
+      ]);
     });
+  };
 
-    client.onConnect = () => {
-      console.log("WebSocket conectado");
+  client.activate();
+  stompClient.current = client;
 
-      // Suscripción al grupo
-      client.subscribe(`/topic/grupos/${groupId}`, (message) => {
-        const msg = JSON.parse(message.body);
+  return () => {
+    client.deactivate();
+  };
+}, [groupId]);
 
-        setMessages(prev => [
-          ...prev,
-          {
-            id: msg.id || Date.now(),
-            text: msg.content,
-            sender: msg.senderId === myId ? "Tú" : "Usuario",
-            isMe: msg.senderId === myId,
-            time: new Date(msg.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
-          },
-        ]);
-      });
-    };
-
-    client.activate();
-    stompClient.current = client;
-
-    return () => {
-      if (client) client.deactivate();
-    };
-  }, [groupId]);
 
   // Scroll al fondo
   useEffect(() => {

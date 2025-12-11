@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getToken } from "../services/authService";
-import SockJS from "sockjs-client";
+import SockJS from "sockjs-client/dist/sockjs";
 import { Client } from "@stomp/stompjs";
 
 const getUserIdFromToken = () => {
@@ -32,22 +32,30 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
 
   const myId = getUserIdFromToken();
 
+  // 1. Conectar WebSocket (SockJS obligatorio en Render)
   useEffect(() => {
     const token = getToken();
-    const socket = new SockJS("https://lunchconnect-backend.onrender.com/ws");
 
     const client = new Client({
-      webSocketFactory: () => socket,
       reconnectDelay: 3000,
       debug: () => {},
+
+      webSocketFactory: () =>
+        new SockJS("https://lunchconnect-backend.onrender.com/ws", null, {
+          transports: ["websocket", "xhr-streaming", "xhr-polling"],
+        }),
+
       connectHeaders: {
         Authorization: `Bearer ${token}`,
       },
     });
 
     client.onConnect = () => {
+      console.log("WebSocket conectado correctamente con SockJS ✔");
+
       client.subscribe(`/topic/grupos/${groupId}`, (message) => {
         const body = JSON.parse(message.body);
+
         setMessages((prev) => [
           ...prev,
           {
@@ -70,15 +78,20 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
     return () => client.deactivate();
   }, [groupId, myId]);
 
+  // Scroll automático
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // 2. Enviar mensaje
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    if (!stompClient.current || !stompClient.current.connected) return;
+    if (!stompClient.current || !stompClient.current.connected) {
+      console.warn("STOMP no está conectado todavía");
+      return;
+    }
 
     const msg = {
       grupoId: groupId.toString(),
@@ -96,21 +109,30 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
 
   return (
     <div className="fixed bottom-0 right-4 w-80 md:w-96 h-[500px] bg-white rounded-t-2xl shadow-2xl flex flex-col z-50">
+      {/* HEADER */}
       <div className="bg-primary p-4 rounded-t-2xl flex justify-between items-center text-white">
         <h3 className="font-bold">{groupName}</h3>
-        <button onClick={onClose}>❌</button>
+        <button onClick={onClose} className="text-white">❌</button>
       </div>
 
+      {/* MENSAJES */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}>
+          <div
+            key={msg.id}
+            className={`flex ${msg.isMe ? "justify-end" : "justify-start"}`}
+          >
             <div
               className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm ${
-                msg.isMe ? "bg-primary text-white" : "bg-white text-gray-800 border"
+                msg.isMe
+                  ? "bg-primary text-white"
+                  : "bg-white text-gray-800 border"
               }`}
             >
               {!msg.isMe && (
-                <p className="text-[10px] font-bold text-primary mb-1">{msg.sender}</p>
+                <p className="text-[10px] font-bold text-primary mb-1">
+                  {msg.sender}
+                </p>
               )}
               <p>{msg.text}</p>
               <p
@@ -126,7 +148,11 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="p-3 bg-white border-t flex items-center gap-2">
+      {/* INPUT */}
+      <form
+        onSubmit={handleSendMessage}
+        className="p-3 bg-white border-t flex items-center gap-2"
+      >
         <input
           type="text"
           value={newMessage}
@@ -134,7 +160,10 @@ const ChatInterface = ({ groupId, groupName, onClose }) => {
           placeholder="Escribe un mensaje..."
           className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm"
         />
-        <button type="submit" className="bg-primary text-white p-2 rounded-full">
+        <button
+          type="submit"
+          className="bg-primary text-white p-2 rounded-full"
+        >
           ➤
         </button>
       </form>

@@ -13,6 +13,15 @@ const Perfil = ({ onOpenChat }) => {
   const [activeChat, setActiveChat] = useState(null);
   const [userGroups, setUserGroups] = useState([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  // --- ESTADOS DEL PERFIL ---
+  const [userId, setUserId] = useState(null);
+  const [profileData, setProfileData] = useState({
+    nombreUsuario: '',
+    linkedin: '',
+    contrasena: '', // Solo se envía si el usuario escribe algo
+    tituloPrincipal: '' // Para el select de títulos
+  });
+  const [loadingProfile, setLoadingProfile] = useState(false);
   
   // Modal de Miembros
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -39,6 +48,11 @@ const Perfil = ({ onOpenChat }) => {
     navigate('/login');
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleAuthError = (status) => {
     if (status === 401 || status === 403) {
       handleLogout();
@@ -47,9 +61,142 @@ const Perfil = ({ onOpenChat }) => {
     return false;
   };
 
+const handleUpdateProfile = async () => {
+    const token = getToken();
+    
+    if (!token || !userId) {
+        alert("Error de sesión. Recarga la página.");
+        return;
+    }
+
+    setLoadingProfile(true);
+
+    // --- CORRECCIÓN: TRADUCIMOS A SNAKE_CASE PARA EL BACKEND ---
+    // Tu DB usa: nombre_usuario, titulo_principal, linkedin, contrasena
+    const payload = {
+      nombre_usuario: profileData.nombreUsuario,
+      linkedin: profileData.linkedin,
+      // Si el título es la opción por defecto, enviamos string vacío o lo que tienes
+      titulo_principal: profileData.tituloPrincipal === '-------' ? '' : profileData.tituloPrincipal
+    };
+
+    // Solo enviamos la contraseña si el usuario escribió una nueva
+    if (profileData.contrasena && profileData.contrasena.trim() !== "") {
+      payload.contrasena = profileData.contrasena; 
+    }
+
+    console.log("Enviando payload corregido:", payload); // Para verificar en consola
+
+    try {
+      const response = await fetch(`https://lunchconnect-backend.onrender.com/api/usuarios/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        alert("¡Datos actualizados correctamente!");
+        setProfileData(prev => ({ ...prev, contrasena: '' })); // Limpiar campo contraseña
+      } else {
+        // Intentar leer el error si es JSON, sino texto
+        const errorText = await response.text();
+        console.error("Error del servidor:", errorText);
+        alert("Error al actualizar. Revisa la consola para más detalles.");
+      }
+    } catch (error) {
+      console.error("Error de red:", error);
+      alert("Error de conexión.");
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+// Helper para decodificar el ID del token
+const getUserIdFromToken = () => {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    
+    const decoded = JSON.parse(jsonPayload);
+    
+    // --- DEBUG: MIRA ESTO EN LA CONSOLA (F12) ---
+    console.log("🔑 CONTENIDO DEL TOKEN:", decoded); 
+    // --------------------------------------------
+
+    // Buscamos el ID en todas las propiedades comunes.
+    // Tu base de datos usa 'id_usuario', así que agregamos esa opción.
+    return decoded.id || decoded.userId || decoded.id_usuario || decoded.sub;
+  } catch (e) {
+    console.error("Error al decodificar token:", e);
+    return null;
+  }
+};
+
+useEffect(() => {
+    // El helper ahora nos devuelve el EMAIL (porque es lo que hay en el 'sub' del token)
+    const emailFromToken = getUserIdFromToken(); 
+    console.log("Email obtenido del token:", emailFromToken);
+
+    if (emailFromToken) {
+      const fetchUserData = async () => {
+        const token = getToken();
+        try {
+          // PASO A: Pedimos la lista de TODOS los usuarios
+          // (Esto evita el Error 500 por enviar un string en vez de un número)
+          const response = await fetch('https://lunchconnect-backend.onrender.com/api/usuarios', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+            const users = await response.json();
+            
+            // PASO B: Buscamos manualmente cuál es nuestro usuario usando el correo
+            const currentUser = users.find(u => 
+                u.correo_electronico === emailFromToken || 
+                u.correoElectronico === emailFromToken ||
+                u.email === emailFromToken
+            );
+
+            if (currentUser) {
+                console.log("Usuario encontrado en BD:", currentUser);
+                
+                // Guardamos el ID numérico REAL para usarlo al guardar cambios
+                setUserId(currentUser.id_usuario || currentUser.id); 
+
+                // Rellenamos el formulario
+                setProfileData({
+                  nombreUsuario: currentUser.nombre_usuario || currentUser.nombreUsuario || '',
+                  linkedin: currentUser.linkedin || '',
+                  tituloPrincipal: currentUser.titulo_principal || currentUser.tituloPrincipal || '',
+                  contrasena: ''
+                });
+            } else {
+                console.error("No se encontró ningún usuario con el correo:", emailFromToken);
+            }
+          } else {
+              console.error("Error al obtener lista de usuarios:", response.status);
+          }
+        } catch (error) {
+          console.error("Error de red cargando perfil:", error);
+        }
+      };
+      fetchUserData();
+    } else {
+      console.error("No se pudo leer el correo del token.");
+    }
+  }, []);
   // ---------------------------
   // GRUPOS: carga inicial (igual a tu código)
   // ---------------------------
+
   useEffect(() => {
     const fetchUserGroups = async () => {
       const token = getToken();
@@ -409,54 +556,91 @@ const Perfil = ({ onOpenChat }) => {
           {/* --- CONTENEDOR PRINCIPAL --- */}
           <div className="bg-primary rounded-b-[2.5rem] rounded-tr-[2.5rem] p-8 md:p-16 shadow-2xl">
 
-            {/* --- PESTAÑA: DATOS --- */}
+            {/* --- PESTAÑA DATOS (CON LÓGICA) --- */}
             {activeTab === 'datos' && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
-                {/* COLUMNA IZQUIERDA: Avatar y Títulos */}
+                
+                {/* COLUMNA IZQUIERDA: Avatar y Título */}
                 <div className="col-span-1 flex flex-col items-center gap-6">
                   <div className="relative">
-                    <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center border-4 border-secondary overflow-hidden">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-32 h-32">
-                        <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" />
-                      </svg>
+                    <div className="w-40 h-40 bg-white rounded-full flex items-center justify-center border-4 border-[#8B3A3A] overflow-hidden">
+                      {/* Avatar SVG */}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3D0F0F" className="w-32 h-32"><path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clipRule="evenodd" /></svg>
                     </div>
-                    <button className="absolute bottom-2 right-2 bg-secondary border-2 border-white p-2 rounded-full text-white hover:bg-red-900 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                      </svg>
-                    </button>
                   </div>
 
                   <div className="w-full">
                     <label className="text-white font-bold text-lg mb-2 block text-center">
-                      Títulos desbloqueados
+                      Título Principal
                     </label>
                     <div className="relative">
-                      <select className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 appearance-none focus:outline-none cursor-pointer font-medium">
-                        <option>-------</option>
-                        <option>Chifa Lover</option>
-                        <option>Rey del Buffet</option>
-                        <option>Networking Master</option>
+                      <select 
+                        name="tituloPrincipal"
+                        value={profileData.tituloPrincipal}
+                        onChange={handleInputChange}
+                        className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 appearance-none focus:outline-none cursor-pointer font-medium"
+                      >
+                        <option value="">Selecciona un título</option>
+                        <option value="Chifa Lover">Chifa Lover</option>
+                        <option value="Rey del Buffet">Rey del Buffet</option>
+                        <option value="Networking Master">Networking Master</option>
+                        <option value="Ingeniero Hambriento">Ingeniero Hambriento</option>
                       </select>
-                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-600">▼</div>
                     </div>
                   </div>
                 </div>
 
-                {/* COLUMNA DERECHA: Inputs */}
+                {/* COLUMNA DERECHA: Inputs Editables */}
                 <div className="col-span-1 md:col-span-2 flex flex-col gap-6">
-                  <InputField label="Usuario" id="usuario" />
-                  <InputField label="Actualizar contraseña" type="password" id="new-password" />
-                  <InputField label="LinkedIn" id="linkedin-profile" />
+                  
+                  {/* Usuario */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-white font-bold text-lg">Nombre de Usuario</label>
+                    <input 
+                      type="text" 
+                      name="nombreUsuario"
+                      value={profileData.nombreUsuario} 
+                      onChange={handleInputChange}
+                      className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B3A3A]"
+                    />
+                  </div>
+
+                  {/* Contraseña */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-white font-bold text-lg">Actualizar contraseña</label>
+                    <input 
+                      type="password" 
+                      name="contrasena"
+                      value={profileData.contrasena} 
+                      onChange={handleInputChange}
+                      placeholder="(Dejar en blanco para mantener la actual)"
+                      className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B3A3A]"
+                    />
+                  </div>
+
+                  {/* LinkedIn */}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-white font-bold text-lg">LinkedIn (URL)</label>
+                    <input 
+                      type="text" 
+                      name="linkedin"
+                      value={profileData.linkedin} 
+                      onChange={handleInputChange}
+                      className="w-full bg-white rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#8B3A3A]"
+                    />
+                  </div>
+
                 </div>
 
+                {/* Botón Guardar */}
                 <div className="col-span-1 md:col-span-3 flex justify-center mt-8 font-secondary">
-                  <button className="bg-secondary hover:bg-red cursor-pointer text-white font-semibold py-3 px-12 rounded-xl transition-colors shadow-lg text-lg">
-                    Guardar cambios
+                  <button 
+                    onClick={handleUpdateProfile}
+                    disabled={loadingProfile}
+                    className="bg-[#8B3A3A] hover:bg-red-800 cursor-pointer text-white font-semibold py-3 px-12 rounded-xl transition-colors shadow-lg text-lg disabled:opacity-50"
+                  >
+                    {loadingProfile ? 'Guardando...' : 'Guardar cambios'}
                   </button>
                 </div>
               </div>

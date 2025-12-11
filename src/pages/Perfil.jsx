@@ -110,9 +110,9 @@ const Perfil = ({ onOpenChat }) => {
   };
 
   // Función para abrir el chat
-  const handleOpenChat = (groupName) => {
+  const handleOpenChat = (group) => {
     if (onOpenChat) {
-      onOpenChat(groupName);
+      onOpenChat({ id: group.id, name: group.name });
     }
   };
 
@@ -237,7 +237,7 @@ const Perfil = ({ onOpenChat }) => {
                           
                           {/* BOTÓN "VER CHAT GRUPAL" */}
                           <button 
-                            onClick={() => handleOpenChat(group.name)} // <--- USAMOS LA PROP AQUÍ
+                          onClick={() => handleOpenChat(group)} // <--- USAMOS LA PROP AQUÍ
                             className="cursor-pointer mt-4 flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-full text-xs font-bold shadow-md hover:bg-[#7b3c3c] hover:scale-105 transition-all"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">

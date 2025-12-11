@@ -1,8 +1,11 @@
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Importar useNavigate
 import EventModal from "./EventModal";
+import { getToken } from "../services/authService"; // Asegúrate de importar getToken
 
 const FeaturedEvents = () => {
   const scrollRef = useRef(null);
+  const navigate = useNavigate(); // Hook para redirección
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   // 💡 Estado para almacenar los grupos reales de la BD
@@ -15,7 +18,7 @@ const FeaturedEvents = () => {
   // =========================================================
   useEffect(() => {
     const fetchGroups = async () => {
-      const API_URL = "https://lunchconnect-backend.onrender.com/api/grupos"; // ⚠️ REEMPLAZA ESTO
+      const API_URL = "https://lunchconnect-backend.onrender.com/api/grupos";
 
       try {
         setLoading(true);
@@ -67,6 +70,52 @@ const FeaturedEvents = () => {
   // Función para cerrar
   const handleCloseModal = () => {
     setSelectedEvent(null);
+  };
+
+  // =========================================================
+  // 💡 LÓGICA PARA UNIRSE A UN GRUPO
+  // =========================================================
+  const handleJoinGroup = async (groupId) => {
+    const token = getToken();
+
+    if (!token) {
+      alert("Debes iniciar sesión para unirte a un grupo.");
+      navigate("/login"); // Redirigir al login si no hay token
+      return;
+    }
+
+    const JOIN_API_URL = `https://lunchconnect-backend.onrender.com/api/grupos/${groupId}/unirse`;
+
+    try {
+      const response = await fetch(JOIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error al unirse al grupo");
+      }
+
+      // Éxito: Mostrar mensaje y actualizar estado local
+      alert("¡Te has unido al grupo exitosamente!");
+
+      // Actualizar la lista de eventos localmente para reflejar el cambio (opcional pero recomendado)
+      setEvents(prevEvents =>
+        prevEvents.map(event =>
+          event.id === groupId
+            ? { ...event, participantesCount: event.participantesCount + 1 }
+            : event
+        )
+      );
+
+    } catch (err) {
+      console.error("Error al unirse al grupo:", err);
+      alert(`No se pudo unir al grupo: ${err.message}`);
+    }
   };
 
   return (
@@ -136,7 +185,11 @@ const FeaturedEvents = () => {
                       )}
                     </div>
 
-                    <button onClick={() => handleOpenModal(event)} className="w-full py-2 cursor-pointer bg-secondary rounded-full font-semibold hover:bg-black transition-colors text-sm">
+                    {/* Botón Únete con lógica handleJoinGroup */}
+                    <button
+                      onClick={() => handleJoinGroup(event.id)}
+                      className="w-full py-2 cursor-pointer bg-secondary rounded-full font-semibold hover:bg-black transition-colors text-sm"
+                    >
                       Únete
                     </button>
                   </div>
@@ -177,6 +230,7 @@ const FeaturedEvents = () => {
                     </div>
 
                   </div>
+
                 </div>
               </div>
             ))}

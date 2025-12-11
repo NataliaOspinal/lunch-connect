@@ -12,14 +12,14 @@ import ChatInterface from './components/ChatInterface';
 import { useState } from 'react';
 
 function App() {
-  // ESTADO GLOBAL DEL CHAT
+// Ahora activeChat guardará un objeto: { id: 1, name: "Grupo A" }
   const [activeChat, setActiveChat] = useState(null);
 
-  // Función para cerrar el chat completamente
   const closeChat = () => setActiveChat(null);
 
-  // Función para abrir el chat (se la pasamos a Perfil)
-  const openChat = (groupName) => setActiveChat(groupName);
+  // Recibimos el objeto completo del grupo
+  const openChat = (groupData) => setActiveChat(groupData);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -35,7 +35,8 @@ function App() {
       </Routes>
       {activeChat && (
         <ChatInterface 
-          groupName={activeChat} 
+          groupId={activeChat.id} 
+          groupName={activeChat.name} 
           onClose={closeChat} 
         />
       )}
